@@ -1,0 +1,109 @@
+#version: "3.8"
+
+services:
+
+  zookeeper:
+    image: confluentinc/cp-zookeeper:7.5.0
+    container_name: zookeeper
+    ports:
+      - "2181:2181"
+    environment:
+      ZOOKEEPER_CLIENT_PORT: 2181
+    networks:
+      - microservice-network
+
+  kafka:
+    image: confluentinc/cp-kafka:7.5.0
+    container_name: kafka
+    ports:
+      - "9092:9092"
+    depends_on:
+      - zookeeper
+    environment:
+      KAFKA_BROKER_ID: 1
+      KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
+      KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092
+      KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    networks:
+      - microservice-network
+
+  eureka:
+    image: service-discovery
+    container_name: eureka
+    ports:
+      - "8761:8761"
+    networks:
+      - microservice-network
+
+  gateway:
+    image: gateway-service
+    container_name: gateway
+    ports:
+      - "8080:8080"
+    depends_on:
+      - eureka
+    networks:
+      - microservice-network
+
+  auth-service:
+    image: auth-service
+    container_name: auth-service
+    depends_on:
+      - eureka
+    networks:
+      - microservice-network
+
+  user-service:
+    image: user-service
+    container_name: user-service
+    depends_on:
+      - eureka
+    networks:
+      - microservice-network
+
+  product-service:
+    image: product-service
+    container_name: product-service
+    depends_on:
+      - redis
+    networks:
+      - microservice-network
+
+  order-service:
+    image: order-service
+    container_name: order-service
+    depends_on:
+      - eureka
+      - kafka
+    networks:
+      - microservice-network
+
+  payment-service:
+    image: payment-service
+    container_name: payment-service
+    depends_on:
+      - eureka
+      - kafka
+    networks:
+      - microservice-network
+
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+      - "6379:6379"
+    networks:
+      - microservice-network
+
+  zipkin:
+    image: openzipkin/zipkin
+    container_name: zipkin
+    ports:
+      - "9411:9411"
+    networks:
+    - microservice-network
+
+networks:
+  microservice-network:
+    driver: bridge
