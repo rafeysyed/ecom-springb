@@ -4,12 +4,15 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
+@Slf4j
 @Component
 public class GatewayValidationFilter extends OncePerRequestFilter {
 
@@ -17,15 +20,18 @@ public class GatewayValidationFilter extends OncePerRequestFilter {
     private String gatewaySecret;
 
     @Override
-    protected void doFilterInternal(HttpServletRequest request,
-                                    HttpServletResponse response,
-                                    FilterChain filterChain)
-            throws ServletException, IOException {
+    protected void doFilterInternal(
+            HttpServletRequest request,
+            HttpServletResponse response,
+            FilterChain filterChain) throws ServletException, IOException {
 
         String path = request.getRequestURI();
 
-        // Allow public auth endpoints
-        if (path.startsWith("/internal/auth") || path.startsWith("/users/register")) {
+        log.info("GatewayValidationFilter path: {}", path);
+
+        if (path.startsWith("/internal/auth")
+                || path.startsWith("/users/register")) {
+
             filterChain.doFilter(request, response);
             return;
         }
