@@ -1,0 +1,74 @@
+@import "tailwindcss";
+@plugin "tailwindcss-animate";
+
+/*
+  Design tokens for the "clean and soft" visual language.
+  Tailwind v4 reads @theme blocks to generate utility classes,
+  so `bg-background`, `rounded-lg`, `shadow-soft`, etc. become available
+  everywhere without touching a separate config file.
+*/
+@theme {
+    /* ---- Color palette ---- */
+    --color-background: #FAFAF8;
+    --color-surface: #FFFFFF;
+    --color-surface-muted: #F3F2EE;
+
+    --color-primary: #6B7FD7;
+    --color-primary-hover: #5A6BC0;
+    --color-primary-light: #EEF0FC;
+
+    --color-text: #2B2B2B;
+    --color-text-muted: #8A8A8A;
+    --color-text-subtle: #B5B5B5;
+
+    --color-border: #ECEAE4;
+
+    --color-danger: #D96B6B;
+    --color-danger-light: #FBEAEA;
+
+    --color-success: #2F8452;
+    --color-success-light: #E3F5E9;
+
+    /* Order status pastels */
+    --color-status-pending-bg: #FFF4E0;
+    --color-status-pending-text: #B8790A;
+    --color-status-confirmed-bg: #E3F5E9;
+    --color-status-confirmed-text: #2F8452;
+    --color-status-cancelled-bg: #FBEAEA;
+    --color-status-cancelled-text: #B84A4A;
+    --color-status-shipped-bg: #E6EEFB;
+    --color-status-shipped-text: #3A6FC4;
+
+    /* ---- Radius scale (soft, rounded everywhere) ---- */
+    --radius-sm: 8px;
+    --radius-md: 12px;
+    --radius-lg: 16px;
+    --radius-xl: 24px;
+
+    /* ---- Shadows (diffused, no hard borders) ---- */
+    --shadow-soft: 0 4px 20px rgba(0, 0, 0, 0.06);
+    --shadow-soft-hover: 0 8px 28px rgba(0, 0, 0, 0.10);
+    --shadow-inset-soft: inset 0 1px 2px rgba(0, 0, 0, 0.04);
+
+    /* ---- Typography ---- */
+    --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+
+    /* ---- Spacing rhythm (extends default scale) ---- */
+    --spacing-18: 4.5rem;
+    --spacing-22: 5.5rem;
+}
+
+/* Base element defaults matching the soft aesthetic */
+@layer base {
+    body {
+        background-color: var(--color-background);
+        color: var(--color-text);
+        font-family: var(--font-sans);
+        -webkit-font-smoothing: antialiased;
+    }
+
+    ::selection {
+        background-color: var(--color-primary-light);
+        color: var(--color-primary-hover);
+    }
+}

@@ -1,0 +1,26 @@
+import { useEffect, useState } from 'react';
+
+/**
+ * Tracks whether a CSS media query currently matches. Useful when a
+ * responsive decision can't be expressed with Tailwind classes alone —
+ * e.g. rendering ProductFilters inside a Modal on mobile instead of the
+ * persistent Sidebar used on desktop.
+ *
+ * Example: const isDesktop = useMediaQuery('(min-width: 768px)');
+ */
+export function useMediaQuery(query: string): boolean {
+    const [matches, setMatches] = useState(() =>
+        typeof window !== 'undefined' ? window.matchMedia(query).matches : false
+    );
+
+    useEffect(() => {
+        const mediaQueryList = window.matchMedia(query);
+        const listener = (event: MediaQueryListEvent) => setMatches(event.matches);
+
+        setMatches(mediaQueryList.matches);
+        mediaQueryList.addEventListener('change', listener);
+        return () => mediaQueryList.removeEventListener('change', listener);
+    }, [query]);
+
+    return matches;
+}
