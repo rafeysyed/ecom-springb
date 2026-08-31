@@ -11,7 +11,7 @@ public class OrderItemDTO {
 
     private String productId;
 
-//    private BigDecimal price; // we are taking price from product service using feign
+    private BigDecimal price;
 
     private Integer quantity;
 }

@@ -15,12 +15,10 @@ export function HomePage() {
             <div className="bg-surface-muted">
                 <PageContainer className="py-20 text-center">
                     <h1 className="text-4xl md:text-5xl font-semibold text-text tracking-tight mb-4">
-                        Find what you need,
-                        <br />
-                        fast.
+                        Everything you need.
                     </h1>
                     <p className="text-text-muted max-w-md mx-auto mb-8">
-                        mrkt brings you a curated selection of quality products
+                        A curated selection of quality products
                         delivered quickly and without the noise.
                     </p>
                     <Link to="/products">

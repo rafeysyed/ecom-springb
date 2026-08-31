@@ -29,6 +29,8 @@ export function OrderConfirmationPage() {
         );
     }
 
+    const total = order.totalAmount ?? order.totalPrice ?? 0;
+
     return (
         <PageContainer className="max-w-lg text-center">
             <div className="w-16 h-16 rounded-full bg-success-light flex items-center justify-center mx-auto mb-5 text-success">
@@ -43,7 +45,7 @@ export function OrderConfirmationPage() {
             <Card padding="lg" className="text-left flex flex-col gap-3 mb-6">
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-text-muted">Order ID</span>
-                    <span className="text-sm font-mono text-text">#{order.orderId.slice(0, 8)}</span>
+                    <span className="text-xs font-mono text-text font-semibold">#{order.orderId}</span>
                 </div>
                 <div className="flex items-center justify-between">
                     <span className="text-sm text-text-muted">Status</span>
@@ -52,7 +54,7 @@ export function OrderConfirmationPage() {
                 <div className="flex items-center justify-between border-t border-border pt-3">
                     <span className="text-sm font-semibold text-text">Total</span>
                     <span className="text-sm font-semibold text-text">
-                        {formatCurrency(order.totalPrice)}
+                        {formatCurrency(total)}
                     </span>
                 </div>
             </Card>

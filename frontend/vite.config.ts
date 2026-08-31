@@ -14,8 +14,8 @@ export default defineConfig({
   server: {
     port: 5173,
     proxy: {
-      // Forwards /internal and other API calls to the gateway during dev,
-      // so the frontend can call relative paths and avoid CORS issues.
+      // Forwards API calls to the gateway during dev, but lets browser page
+      // navigations (which accept text/html) fall through to Vite's SPA fallback.
       '/internal': {
         target: 'http://localhost:8080',
         changeOrigin: true,
@@ -23,10 +23,20 @@ export default defineConfig({
       '/products': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        bypass: (req) => {
+          if (req.headers.accept?.includes('text/html')) {
+            return '/index.html';
+          }
+        },
       },
       '/orders': {
         target: 'http://localhost:8080',
         changeOrigin: true,
+        bypass: (req) => {
+          if (req.headers.accept?.includes('text/html')) {
+            return '/index.html';
+          }
+        },
       },
     },
   },

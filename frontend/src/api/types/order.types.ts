@@ -1,4 +1,14 @@
-export type OrderStatus = 'PENDING' | 'CONFIRMED' | 'SHIPPED' | 'DELIVERED' | 'CANCELLED';
+export type OrderStatus =
+    | 'CREATED'
+    | 'PENDING'
+    | 'PAYMENT_PENDING'
+    | 'PAYMENT_COMPLETED'
+    | 'PAID'
+    | 'CONFIRMED'
+    | 'FAILED'
+    | 'CANCELLED'
+    | 'SHIPPED'
+    | 'DELIVERED';
 
 // ---- Requests ----
 
@@ -17,13 +27,15 @@ export interface PlaceOrderRequest {
 export interface OrderItem {
     productId: string;
     quantity: number;
-    price: number;
+    price?: number;
 }
 
 export interface Order {
     orderId: string;
     userId: string;
-    totalPrice: number;
+    totalAmount?: number;
+    totalPrice?: number;
     status: OrderStatus;
+    createdAt?: string;
     items: OrderItem[];
 }

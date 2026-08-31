@@ -40,13 +40,15 @@ public class OrderMapper {
         responseDTO.setTotalAmount(order.getTotalAmount());
         responseDTO.setUserId(order.getUserId().toString());
         responseDTO.setOrderId(order.getId().toString());
+        responseDTO.setStatus(order.getStatus());
+        responseDTO.setCreatedAt(order.getCreatedAt());
 
         List<OrderItemDTO> orderItemDTOList =  new ArrayList<>();
 
         for(OrderItem item : order.getItems()){
 
             OrderItemDTO orderItemDTO = new OrderItemDTO();
-//            orderItemDTO.setPrice(item.getPrice());
+            orderItemDTO.setPrice(item.getPrice());
             orderItemDTO.setQuantity(item.getQuantity());
             orderItemDTO.setProductId(item.getProductId().toString());
             orderItemDTOList.add(orderItemDTO);

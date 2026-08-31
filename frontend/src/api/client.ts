@@ -1,5 +1,5 @@
 import axios, { type InternalAxiosRequestConfig, AxiosError } from 'axios';
-import { useAuthStore } from '@/store/authStore';
+import { useAuthStore, getStoredToken } from '@/store/authStore';
 
 /**
  * Base gateway URL. In dev this is proxied via vite.config.ts, so requests
@@ -17,7 +17,7 @@ export const apiClient = axios.create({
 
 // Attach the bearer token to every request, if present.
 apiClient.interceptors.request.use((config: InternalAxiosRequestConfig) => {
-    const token = useAuthStore.getState().token;
+    const token = getStoredToken();
     if (token) {
         config.headers.set('Authorization', `Bearer ${token}`);
     }

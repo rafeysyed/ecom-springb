@@ -10,7 +10,7 @@ export function OrderHistoryPage() {
 
     return (
         <PageContainer className="max-w-2xl">
-            <h1 className="text-2xl font-semibold text-text mb-6">Your Orders</h1>
+            <h1 className="text-xl font-semibold text-text mb-5">Your Orders</h1>
 
             {isError ? (
                 <ErrorState onRetry={() => refetch()} />
