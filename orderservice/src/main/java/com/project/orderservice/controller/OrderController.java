@@ -28,6 +28,11 @@ public class OrderController {
        return ResponseEntity.status(HttpStatus.CREATED).body(savedOrder);
     }
 
+    @GetMapping
+    public ResponseEntity<List<OrderResponseDTO>> getAllOrders(){
+        return ResponseEntity.ok(orderService.getAllOrders());
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponseDTO> getOrder(@PathVariable UUID id){
 

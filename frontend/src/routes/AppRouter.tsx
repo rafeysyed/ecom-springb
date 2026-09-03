@@ -1,6 +1,7 @@
 import { createBrowserRouter, RouterProvider } from 'react-router-dom';
 import { AppLayout } from '@/components/layout/AppLayout';
 import { ProtectedRoute } from '@/routes/ProtectedRoute';
+import { AdminRoute } from '@/routes/AdminRoute';
 import { RouteErrorBoundary } from '@/components/feedback/RouteErrorBoundary';
 
 import { LoginPage } from '@/pages/LoginPage';
@@ -15,6 +16,12 @@ import { OrderTrackingPage } from '@/pages/OrderTrackingPage';
 import { OrderHistoryPage } from '@/pages/OrderHistoryPage';
 import { ProfilePage } from '@/pages/ProfilePage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
+
+// Admin Pages
+import { AdminLayout } from '@/features/admin/components/AdminLayout';
+import { AdminDashboardPage } from '@/features/admin/pages/AdminDashboardPage';
+import { AdminOrdersPage } from '@/features/admin/pages/AdminOrdersPage';
+import { AdminProductsPage } from '@/features/admin/pages/AdminProductsPage';
 
 const router = createBrowserRouter([
     {
@@ -35,6 +42,20 @@ const router = createBrowserRouter([
                     { path: '/orders/:orderId', element: <OrderTrackingPage /> },
                     { path: '/orders/:orderId/confirmation', element: <OrderConfirmationPage /> },
                     { path: '/profile', element: <ProfilePage /> },
+                ],
+            },
+            {
+                element: <AdminRoute />,
+                children: [
+                    {
+                        path: '/admin',
+                        element: <AdminLayout />,
+                        children: [
+                            { index: true, element: <AdminDashboardPage /> },
+                            { path: 'orders', element: <AdminOrdersPage /> },
+                            { path: 'products', element: <AdminProductsPage /> },
+                        ],
+                    },
                 ],
             },
             { path: '*', element: <NotFoundPage /> },

@@ -117,6 +117,15 @@ public class OrderService {
         return OrderMapper.mapToResponse(savedOrder);
     }
 
+    public List<OrderResponseDTO> getAllOrders(){
+        List<Order> orderList = orderRepository.findAll();
+        List<OrderResponseDTO> responseList = new ArrayList<>();
+        for(Order order : orderList){
+            responseList.add(OrderMapper.mapToResponse(order));
+        }
+        return responseList;
+    }
+
    public OrderResponseDTO getOrder(UUID id){
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found"));
