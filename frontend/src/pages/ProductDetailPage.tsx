@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams } from 'react-router-dom';
 import { Minus, Plus } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
@@ -11,6 +11,8 @@ import { Button } from '@/components/ui/Button';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { useProduct } from '@/features/products/hooks/useProduct';
+import { useRecentlyViewed } from '@/features/products/hooks/useRecentlyViewed';
+import { RecentlyViewedSection } from '@/features/products/components/RecentlyViewedSection';
 import { useCartStore } from '@/features/cart/cartStore';
 import { useToast } from '@/components/ui/Toast';
 import { useSearch } from '@/context/SearchContext';
@@ -19,10 +21,17 @@ import { parseImageUrls } from '@/api/types/product.types';
 export function ProductDetailPage() {
     const { id } = useParams<{ id: string }>();
     const { data: product, isLoading, isError, refetch } = useProduct(id);
+    const { recordView } = useRecentlyViewed();
     const addItem = useCartStore((s) => s.addItem);
     const { setSelectedRootCategory, setSelectedCategory, setSelectedBrand } = useSearch();
     const { showToast } = useToast();
     const [quantity, setQuantity] = useState(1);
+
+    useEffect(() => {
+        if (product) {
+            recordView(product);
+        }
+    }, [product, recordView]);
 
     if (isLoading) {
         return (
@@ -145,6 +154,12 @@ export function ProductDetailPage() {
                     </Button>
                 </div>
             </div>
+
+            <RecentlyViewedSection
+                excludeProductId={product.id}
+                className="mt-16 border-t border-border pt-10"
+                maxDisplay={4}
+            />
         </PageContainer>
     );
 }

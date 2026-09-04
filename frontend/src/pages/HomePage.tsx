@@ -3,6 +3,7 @@ import { ArrowRight } from 'lucide-react';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Button } from '@/components/ui/Button';
 import { ProductGrid } from '@/features/products/components/ProductGrid';
+import { RecentlyViewedSection } from '@/features/products/components/RecentlyViewedSection';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { useProducts } from '@/features/products/hooks/useProducts';
 
@@ -30,19 +31,23 @@ export function HomePage() {
                 </PageContainer>
             </div>
 
-            <PageContainer>
-                <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-text">Featured</h2>
-                    <Link to="/products" className="text-sm text-primary hover:text-primary-hover font-medium">
-                        View all
-                    </Link>
-                </div>
+            <PageContainer className="py-12 space-y-12">
+                <RecentlyViewedSection maxDisplay={4} />
 
-                {isError ? (
-                    <ErrorState onRetry={() => refetch()} />
-                ) : (
-                    <ProductGrid products={featured} isLoading={isLoading} />
-                )}
+                <div>
+                    <div className="flex items-center justify-between mb-6">
+                        <h2 className="text-xl font-semibold text-text">Featured</h2>
+                        <Link to="/products" className="text-sm text-primary hover:text-primary-hover font-medium">
+                            View all
+                        </Link>
+                    </div>
+
+                    {isError ? (
+                        <ErrorState onRetry={() => refetch()} />
+                    ) : (
+                        <ProductGrid products={featured} isLoading={isLoading} />
+                    )}
+                </div>
             </PageContainer>
         </>
     );
