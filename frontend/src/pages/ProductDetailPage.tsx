@@ -13,6 +13,7 @@ import { ErrorState } from '@/components/feedback/ErrorState';
 import { useProduct } from '@/features/products/hooks/useProduct';
 import { useRecentlyViewed } from '@/features/products/hooks/useRecentlyViewed';
 import { RecentlyViewedSection } from '@/features/products/components/RecentlyViewedSection';
+import { SimilarProductsSection } from '@/features/products/components/SimilarProductsSection';
 import { useCartStore } from '@/features/cart/cartStore';
 import { useToast } from '@/components/ui/Toast';
 import { useSearch } from '@/context/SearchContext';
@@ -155,9 +156,15 @@ export function ProductDetailPage() {
                 </div>
             </div>
 
+            <SimilarProductsSection
+                productId={product.id}
+                className="mt-16 border-t border-border pt-10"
+                maxDisplay={4}
+            />
+
             <RecentlyViewedSection
                 excludeProductId={product.id}
-                className="mt-16 border-t border-border pt-10"
+                className="mt-12 border-t border-border pt-10"
                 maxDisplay={4}
             />
         </PageContainer>

@@ -17,7 +17,7 @@ public class ProductController {
 
     private final ProductService productService;
 
-    @CacheEvict(value = "products", allEntries = true) //applicable to delete and update, cache must clear
+    @CacheEvict(value = {"products", "similar_products"}, allEntries = true) //applicable to delete and update, cache must clear
     @PostMapping
     public Product createProduct(@RequestBody Product product){
         return productService.createProduct(product);
@@ -36,5 +36,14 @@ public class ProductController {
 
         System.out.println("Fetching from DB...");
         return productService.getAllProducts();
+    }
+
+    @Cacheable(value = "similar_products", key = "#productId.toString() + '_' + #limit")
+    @GetMapping("/{productId}/similar")
+    public List<Product> getSimilarProducts(
+            @PathVariable UUID productId,
+            @RequestParam(defaultValue = "6") int limit
+    ){
+        return productService.getSimilarProducts(productId, limit);
     }
 }
