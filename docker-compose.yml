@@ -2,6 +2,28 @@
 
 services:
 
+  postgres:
+    image: postgres:16-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+      - ./init-databases.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    ports:
+      - "5433:5432"
+    networks:
+      microservice-network:
+        aliases:
+          - postgres
+          - host.docker.internal
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 3s
+      timeout: 5s
+      retries: 10
+
   zookeeper:
     image: confluentinc/cp-zookeeper:7.5.0
     container_name: zookeeper
@@ -26,7 +48,10 @@ services:
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
     networks:
-      - microservice-network
+      microservice-network:
+        aliases:
+          - kafka
+          - kafka-service
 
   eureka:
     image: service-discovery
@@ -50,7 +75,14 @@ services:
     image: auth-service
     container_name: auth-service
     depends_on:
-      - eureka
+      eureka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/authdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
     networks:
       - microservice-network
 
@@ -58,7 +90,14 @@ services:
     image: user-service
     container_name: user-service
     depends_on:
-      - eureka
+      eureka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/userdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
     networks:
       - microservice-network
 
@@ -66,7 +105,16 @@ services:
     image: product-service
     container_name: product-service
     depends_on:
-      - redis
+      eureka:
+        condition: service_started
+      redis:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/productdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
     networks:
       - microservice-network
 
@@ -74,8 +122,17 @@ services:
     image: order-service
     container_name: order-service
     depends_on:
-      - eureka
-      - kafka
+      eureka:
+        condition: service_started
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/orderdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - microservice-network
 
@@ -83,8 +140,17 @@ services:
     image: payment-service
     container_name: payment-service
     depends_on:
-      - eureka
-      - kafka
+      eureka:
+        condition: service_started
+      kafka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/paymentdb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - microservice-network
 
@@ -102,8 +168,11 @@ services:
     ports:
       - "9411:9411"
     networks:
-    - microservice-network
+      - microservice-network
 
 networks:
   microservice-network:
     driver: bridge
+
+volumes:
+  postgres-data:
