@@ -1,10 +1,13 @@
 package com.project.orderservice.service;
 
+import com.project.orderservice.client.InventoryClient;
 import com.project.orderservice.client.ProductClient;
 import com.project.orderservice.client.UserClient;
 import com.project.orderservice.dto.OrderRequestDTO;
 import com.project.orderservice.dto.OrderResponseDTO;
 import com.project.orderservice.dto.ProductResponse;
+import com.project.orderservice.dto.inventory.InventoryItemDTO;
+import com.project.orderservice.dto.inventory.InventoryReservationRequest;
 import com.project.orderservice.entity.Order;
 import com.project.orderservice.entity.OrderItem;
 import com.project.orderservice.entity.OrderStatus;
@@ -36,14 +39,17 @@ public class OrderService {
     private OrderEventProducer orderEventProducer;
     private final UserClient userClient;
     private final ProductClient productClient;
+    private final InventoryClient inventoryClient;
 //    private final RestTemplate restTemplate;
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer,
-                        UserClient userClient, ProductClient productClient){
+                        UserClient userClient, ProductClient productClient,
+                        InventoryClient inventoryClient){
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.userClient = userClient;
         this.productClient = productClient;
+        this.inventoryClient = inventoryClient;
     }
 
     @CircuitBreaker(name = "productService", fallbackMethod = "productFallback")
@@ -103,6 +109,20 @@ public class OrderService {
         order.setTotalAmount(totalAmount);
 
         Order savedOrder = orderRepository.save(order);
+
+        // Reserve inventory in inventory-service
+        try {
+            List<InventoryItemDTO> reservationItems = savedOrder.getItems().stream()
+                    .map(i -> new InventoryItemDTO(i.getProductId(), i.getQuantity()))
+                    .toList();
+            inventoryClient.reserveStock(new InventoryReservationRequest(savedOrder.getId(), reservationItems));
+            log.info("Successfully reserved inventory for order {}", savedOrder.getId());
+        } catch (Exception e) {
+            log.error("Failed to reserve inventory for order {}: {}", savedOrder.getId(), e.getMessage());
+            savedOrder.setStatus(OrderStatus.FAILED);
+            orderRepository.save(savedOrder);
+            throw new RuntimeException("Could not place order: " + e.getMessage());
+        }
 
         OrderCreatedEvent event = new OrderCreatedEvent(
                 savedOrder.getId().toString(),
@@ -176,7 +196,7 @@ public class OrderService {
             return;
         }
 
-        if(((current == OrderStatus.CREATED) || (current == OrderStatus.PAYMENT_PENDING))
+        if(((current == OrderStatus.CREATED) || (current == OrderStatus.PAYMENT_PENDING) || (current == OrderStatus.PAID))
                 && (newStatus == OrderStatus.CANCELLED)){
             return;
         }
@@ -189,12 +209,29 @@ public class OrderService {
         Order order = orderRepository.findById(UUID.fromString(orderId))
                 .orElseThrow(() -> new RuntimeException("orderId not found: "+orderId));
 
+        if (order.getStatus() == OrderStatus.CANCELLED) {
+            log.info("Order {} is already CANCELLED, ignoring late payment update: {}", orderId, status);
+            return;
+        }
+
       switch (status.toUpperCase()){
           case "SUCCESS":
               order.setStatus(OrderStatus.PAID);
+              try {
+                  inventoryClient.commitReservation(UUID.fromString(orderId));
+                  log.info("Committed inventory reservation for order {}", orderId);
+              } catch (Exception e) {
+                  log.error("Failed to commit inventory reservation for order {}: {}", orderId, e.getMessage());
+              }
               break;
           case "FAILED":
               order.setStatus(OrderStatus.FAILED);
+              try {
+                  inventoryClient.releaseReservation(UUID.fromString(orderId));
+                  log.info("Released inventory reservation for failed order {}", orderId);
+              } catch (Exception e) {
+                  log.error("Failed to release inventory reservation for order {}: {}", orderId, e.getMessage());
+              }
               break;
           default:
               throw new RuntimeException("Unknown status"+status);
@@ -203,6 +240,33 @@ public class OrderService {
         orderRepository.save(order);
 
         log.info("Order status updated to {}", status);
+    }
+
+    public OrderResponseDTO cancelOrder(UUID orderId) {
+        Order order = orderRepository.findById(orderId)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with this id : " + orderId));
+
+        if (order.getStatus() == OrderStatus.CANCELLED || order.getStatus() == OrderStatus.FAILED) {
+            return OrderMapper.mapToResponse(order);
+        }
+
+        if (order.getStatus() == OrderStatus.SHIPPED || order.getStatus() == OrderStatus.DELIVERED) {
+            throw new IllegalStateException("Cannot cancel an order that has already been shipped or delivered");
+        }
+
+        validateStatusTransition(order.getStatus(), OrderStatus.CANCELLED);
+
+        order.setStatus(OrderStatus.CANCELLED);
+        Order savedOrder = orderRepository.save(order);
+
+        try {
+            inventoryClient.releaseReservation(orderId);
+            log.info("Released/Restocked inventory for cancelled order {}", orderId);
+        } catch (Exception e) {
+            log.error("Error communicating with inventory service during order cancellation for {}: {}", orderId, e.getMessage());
+        }
+
+        return OrderMapper.mapToResponse(savedOrder);
     }
 
     //RestTemplate is knowledge purpose, we use modern way(Feign Client) in our project

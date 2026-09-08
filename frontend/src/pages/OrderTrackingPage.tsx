@@ -1,19 +1,27 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { PageContainer } from '@/components/layout/PageContainer';
 import { Card } from '@/components/ui/Card';
+import { Button } from '@/components/ui/Button';
 import { LoadingState } from '@/components/feedback/LoadingState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { OrderStatusBadge } from '@/features/orders/components/OrderStatusBadge';
 import { OrderTimeline } from '@/features/orders/components/OrderTimeline';
+import { CancelOrderModal } from '@/features/orders/components/CancelOrderModal';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useOrder } from '@/features/orders/hooks/useOrder';
+import { useCancelOrder } from '@/features/orders/hooks/useCancelOrder';
 import { useProducts } from '@/features/products/hooks/useProducts';
-import { ArrowLeft } from 'lucide-react';
+import { useToast } from '@/components/ui/Toast';
+import { ArrowLeft, Ban } from 'lucide-react';
 
 export function OrderTrackingPage() {
     const { orderId } = useParams<{ orderId: string }>();
     const { data: order, isLoading, isError, refetch } = useOrder(orderId);
     const { data: products } = useProducts();
+    const { mutate: cancelOrder, isPending: isCancelling } = useCancelOrder();
+    const { showToast } = useToast();
+    const [isCancelModalOpen, setIsCancelModalOpen] = useState(false);
 
     if (isLoading) {
         return (
@@ -33,6 +41,22 @@ export function OrderTrackingPage() {
 
     const totalAmount = order.totalAmount ?? order.totalPrice ?? 0;
     const totalItems = (order.items || []).reduce((sum, i) => sum + i.quantity, 0);
+    const isCancellable = ['PAID', 'CREATED', 'PAYMENT_PENDING', 'CONFIRMED'].includes(
+        order.status?.toUpperCase()
+    );
+
+    const handleConfirmCancel = () => {
+        cancelOrder(order.orderId, {
+            onSuccess: () => {
+                showToast('Order cancelled successfully. Items have been restocked.', 'success');
+                setIsCancelModalOpen(false);
+                refetch();
+            },
+            onError: (err: any) => {
+                showToast(err?.response?.data?.message || 'Failed to cancel order.', 'error');
+            },
+        });
+    };
 
     return (
         <PageContainer className="max-w-2xl">
@@ -44,7 +68,7 @@ export function OrderTrackingPage() {
                 Back to Orders
             </Link>
 
-            {/* Header: One-line Order ID with Badge */}
+            {/* Header: One-line Order ID with Badge & Cancel Button */}
             <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-6">
                 <div>
                     <h1 className="text-xl font-bold text-text font-mono">
@@ -54,8 +78,19 @@ export function OrderTrackingPage() {
                         {totalItems} item{totalItems !== 1 ? 's' : ''} · Total: <span className="font-semibold text-text">{formatCurrency(totalAmount)}</span>
                     </p>
                 </div>
-                <div className="self-start sm:self-center">
+                <div className="flex items-center gap-3 self-start sm:self-center">
                     <OrderStatusBadge status={order.status} />
+                    {isCancellable && (
+                        <Button
+                            variant="secondary"
+                            size="sm"
+                            onClick={() => setIsCancelModalOpen(true)}
+                            className="text-danger hover:text-danger hover:border-danger/40 border-border text-xs gap-1.5"
+                        >
+                            <Ban size={13} />
+                            Cancel Order
+                        </Button>
+                    )}
                 </div>
             </div>
 
@@ -63,6 +98,14 @@ export function OrderTrackingPage() {
             <Card padding="lg" className="mb-6">
                 <OrderTimeline status={order.status} />
             </Card>
+
+            <CancelOrderModal
+                isOpen={isCancelModalOpen}
+                orderId={order.orderId}
+                isPending={isCancelling}
+                onClose={() => setIsCancelModalOpen(false)}
+                onConfirm={handleConfirmCancel}
+            />
 
             {/* Ordered Items with Product Thumbnails and Pricing */}
             <Card padding="lg">

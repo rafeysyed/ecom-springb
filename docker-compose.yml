@@ -154,6 +154,16 @@ services:
     networks:
       - microservice-network
 
+  inventory-service:
+    image: inventory-service
+    container_name: inventory-service
+    ports:
+      - "8086:8086"
+    depends_on:
+      - eureka
+    networks:
+      - microservice-network
+
   redis:
     image: redis:latest
     container_name: redis

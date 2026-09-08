@@ -65,9 +65,7 @@ public class OrderEventConsumer {
                         "OrderId is not found to handle payment failure event: "
                 +event.getOrderId()));
 
-        order.setStatus(OrderStatus.FAILED);
-//        orderService.updateOrderStatus(event.getOrderId(),OrderStatus.FAILED.toString());
-        orderRepository.save(order);
+        orderService.updateOrderStatus(event.getOrderId(), "FAILED");
 
         ProcessedEvent pEvent = new ProcessedEvent();
         pEvent.setEventId(event.getOrderId());
