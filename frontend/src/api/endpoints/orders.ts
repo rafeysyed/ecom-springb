@@ -15,3 +15,8 @@ export async function getOrderHistory(userId: string): Promise<Order[]> {
     const { data } = await apiClient.get<Order[]>(`/orders/user/${userId}`);
     return data;
 }
+
+export async function cancelOrder(orderId: string): Promise<Order> {
+    const { data } = await apiClient.put<Order>(`/orders/${orderId}/cancel`);
+    return data;
+}
