@@ -22,7 +22,7 @@ export function LoginForm() {
         const state = location.state as LocationState | null;
 
         doLogin(
-            { email, password },
+            { email: email.trim(), password },
             {
                 onSuccess: (data) => {
                     // Check if the user is an admin
@@ -73,7 +73,9 @@ export function LoginForm() {
 
                 {error && (
                     <p className="text-sm text-danger">
-                        Invalid email or password. Please try again.
+                        {(error as any)?.response?.status === 401
+                            ? 'Invalid email or password. Please try again.'
+                            : 'Unable to connect to the backend server. Please verify the dev server and backend are running.'}
                     </p>
                 )}
 

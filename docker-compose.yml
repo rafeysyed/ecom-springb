@@ -55,24 +55,31 @@ services:
 
   eureka:
     image: service-discovery
+    build: ./servicediscovery
     container_name: eureka
     ports:
       - "8761:8761"
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     networks:
       - microservice-network
 
   gateway:
     image: gateway-service
+    build: ./gatewayservice
     container_name: gateway
     ports:
       - "8080:8080"
     depends_on:
       - eureka
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
     networks:
       - microservice-network
 
   auth-service:
     image: auth-service
+    build: ./authservice
     container_name: auth-service
     depends_on:
       eureka:
@@ -80,6 +87,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/authdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
@@ -88,6 +96,7 @@ services:
 
   user-service:
     image: user-service
+    build: ./userservice
     container_name: user-service
     depends_on:
       eureka:
@@ -95,6 +104,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/userdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
@@ -103,6 +113,7 @@ services:
 
   product-service:
     image: product-service
+    build: ./productservice
     container_name: product-service
     depends_on:
       eureka:
@@ -112,6 +123,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/productdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
@@ -120,6 +132,7 @@ services:
 
   order-service:
     image: order-service
+    build: ./orderservice
     container_name: order-service
     depends_on:
       eureka:
@@ -129,6 +142,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/orderdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
@@ -138,6 +152,7 @@ services:
 
   payment-service:
     image: payment-service
+    build: ./paymentservice
     container_name: payment-service
     depends_on:
       eureka:
@@ -147,6 +162,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/paymentdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
@@ -156,11 +172,20 @@ services:
 
   inventory-service:
     image: inventory-service
+    build: ./inventoryservice
     container_name: inventory-service
     ports:
       - "8086:8086"
     depends_on:
-      - eureka
+      eureka:
+        condition: service_started
+      postgres:
+        condition: service_healthy
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+      - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventorydb
+      - SPRING_DATASOURCE_USERNAME=postgres
+      - SPRING_DATASOURCE_PASSWORD=postgres
     networks:
       - microservice-network
 

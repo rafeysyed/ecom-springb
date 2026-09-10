@@ -26,23 +26,8 @@ public class OrderEventConsumer {
             topics = "order-created",
             groupId = "payment-group"
     )
-    @RetryableTopic(
-            attempts = "3",
-            backoff = @Backoff(delay = 2000),
-            dltTopicSuffix = ".DLT"
-    )
-    public void consume(OrderCreatedEvent event) throws JsonProcessingException {
-
-        log.info("Received Order Created Event: {}", event);
-
-        paymentService.processPayment(
-                event.getOrderId(),
-                event.getUserId(),
-                Double.parseDouble(event.getTotalAmount())
-        );
-
-        //Simulate payment processing
-        log.info("Processing payment for order {}", event.getOrderId());
-
+    public void consume(OrderCreatedEvent event) {
+        log.info("Received Order Created Event for order: {}, user: {}, amount: {}. Awaiting customer payment via checkout.",
+                event.getOrderId(), event.getUserId(), event.getTotalAmount());
     }
 }

@@ -32,7 +32,8 @@ $services = @(
   @{ Folder = "userservice";      Image = "user-service" },
   @{ Folder = "productservice";   Image = "product-service" },
   @{ Folder = "orderservice";     Image = "order-service" },
-  @{ Folder = "paymentservice";   Image = "payment-service" }
+  @{ Folder = "paymentservice";   Image = "payment-service" },
+  @{ Folder = "inventoryservice"; Image = "inventory-service" }
 )
 
 foreach ($entry in $services) {

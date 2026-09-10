@@ -38,6 +38,15 @@ export default defineConfig({
           }
         },
       },
+      '/payments': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+        bypass: (req) => {
+          if (req.headers.accept?.includes('text/html')) {
+            return '/index.html';
+          }
+        },
+      },
     },
   },
 });

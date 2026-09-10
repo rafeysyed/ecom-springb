@@ -40,16 +40,19 @@ public class OrderService {
     private final UserClient userClient;
     private final ProductClient productClient;
     private final InventoryClient inventoryClient;
+    private final com.project.orderservice.client.PaymentClient paymentClient;
 //    private final RestTemplate restTemplate;
 
     public OrderService(OrderRepository orderRepository, OrderEventProducer orderEventProducer,
                         UserClient userClient, ProductClient productClient,
-                        InventoryClient inventoryClient){
+                        InventoryClient inventoryClient,
+                        com.project.orderservice.client.PaymentClient paymentClient){
         this.orderRepository = orderRepository;
         this.orderEventProducer = orderEventProducer;
         this.userClient = userClient;
         this.productClient = productClient;
         this.inventoryClient = inventoryClient;
+        this.paymentClient = paymentClient;
     }
 
     @CircuitBreaker(name = "productService", fallbackMethod = "productFallback")
@@ -254,16 +257,28 @@ public class OrderService {
             throw new IllegalStateException("Cannot cancel an order that has already been shipped or delivered");
         }
 
+        OrderStatus previousStatus = order.getStatus();
         validateStatusTransition(order.getStatus(), OrderStatus.CANCELLED);
 
         order.setStatus(OrderStatus.CANCELLED);
         Order savedOrder = orderRepository.save(order);
 
+        // Restock inventory
         try {
             inventoryClient.releaseReservation(orderId);
             log.info("Released/Restocked inventory for cancelled order {}", orderId);
         } catch (Exception e) {
             log.error("Error communicating with inventory service during order cancellation for {}: {}", orderId, e.getMessage());
+        }
+
+        // Automated refund if order was already paid
+        if (previousStatus == OrderStatus.PAID) {
+            try {
+                paymentClient.refundPayment(new com.project.orderservice.dto.payment.PaymentRefundRequest(orderId.toString(), null, "ORDER_CANCELLED_BY_CUSTOMER"));
+                log.info("Triggered payment refund for cancelled order {}", orderId);
+            } catch (Exception e) {
+                log.error("Error communicating with payment service for refund on order {}: {}", orderId, e.getMessage());
+            }
         }
 
         return OrderMapper.mapToResponse(savedOrder);
