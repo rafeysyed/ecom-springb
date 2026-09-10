@@ -17,7 +17,7 @@ import { SimilarProductsSection } from '@/features/products/components/SimilarPr
 import { useCartStore } from '@/features/cart/cartStore';
 import { useToast } from '@/components/ui/Toast';
 import { useSearch } from '@/context/SearchContext';
-import { parseImageUrls } from '@/api/types/product.types';
+import { parseImageUrls, parseAvailableSizes } from '@/api/types/product.types';
 
 export function ProductDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -27,10 +27,17 @@ export function ProductDetailPage() {
     const { setSelectedRootCategory, setSelectedCategory, setSelectedBrand } = useSearch();
     const { showToast } = useToast();
     const [quantity, setQuantity] = useState(1);
+    const [selectedSize, setSelectedSize] = useState<string>('');
 
     useEffect(() => {
         if (product) {
             recordView(product);
+            const sizes = parseAvailableSizes(product);
+            if (sizes.length > 0) {
+                setSelectedSize(sizes[0]);
+            } else if (product.size) {
+                setSelectedSize(product.size);
+            }
         }
     }, [product, recordView]);
 
@@ -55,10 +62,14 @@ export function ProductDetailPage() {
     }
 
     const images = parseImageUrls(product);
+    const availableSizes = parseAvailableSizes(product);
 
     const handleAddToCart = () => {
-        addItem(product, quantity);
-        showToast(`Added ${quantity} × "${product.name}" to cart`, 'success');
+        addItem(product, quantity, selectedSize || product.size || undefined, product.color || undefined);
+        showToast(
+            `Added ${quantity} × "${product.name}"${selectedSize ? ` (${selectedSize})` : ''} to cart`,
+            'success'
+        );
     };
 
     // Clicking root category in breadcrumbs filters by it
@@ -123,6 +134,35 @@ export function ProductDetailPage() {
                     <p className="text-sm text-text-muted leading-relaxed border-t border-border pt-4">
                         {product.description}
                     </p>
+
+                    {availableSizes.length > 0 && (
+                        <div className="flex flex-col gap-2 border-t border-border pt-4">
+                            <div className="flex justify-between items-center text-xs">
+                                <span className="font-semibold text-text uppercase tracking-wide">Available Sizes</span>
+                                {selectedSize && (
+                                    <span className="text-text-muted">
+                                        Selected: <strong className="text-primary">{selectedSize}</strong>
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex flex-wrap gap-2">
+                                {availableSizes.map((size) => (
+                                    <button
+                                        key={size}
+                                        type="button"
+                                        onClick={() => setSelectedSize(size)}
+                                        className={`px-3.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
+                                            selectedSize === size
+                                                ? 'border-primary bg-primary/10 text-primary shadow-xs font-bold'
+                                                : 'border-border text-text hover:border-text-muted/60 bg-surface'
+                                        }`}
+                                    >
+                                        {size}
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
 
                     <div className="flex items-center gap-4 border-t border-border pt-4">
                         <span className="text-sm font-medium text-text">Quantity</span>

@@ -1,0 +1,14 @@
+package com.project.userservice.repository;
+
+import com.project.userservice.entity.UserCartItem;
+import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.stereotype.Repository;
+
+import java.util.List;
+import java.util.UUID;
+
+@Repository
+public interface UserCartRepository extends JpaRepository<UserCartItem, UUID> {
+    List<UserCartItem> findByUserId(UUID userId);
+    void deleteByUserId(UUID userId);
+}

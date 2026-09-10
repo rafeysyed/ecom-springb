@@ -15,7 +15,18 @@ import type { PaymentMethod } from '@/api/types/payment.types';
 import { ThreeDSecureModal } from '@/features/orders/components/ThreeDSecureModal';
 
 export function CheckoutPage() {
-    const { items, totalItems, totalPrice, toOrderItems, clearCart } = useCart();
+    const {
+        items,
+        totalItems,
+        subtotal,
+        discountAmount,
+        shippingFee,
+        finalTotal,
+        totalPrice,
+        appliedPromo,
+        toOrderItems,
+        clearCart,
+    } = useCart();
     const userId = useAuthStore((s) => s.userId);
     const { mutateAsync: submitOrder, isPending: isOrderPending } = usePlaceOrder();
     const navigate = useNavigate();
@@ -315,22 +326,50 @@ export function CheckoutPage() {
                             Order Summary
                         </h2>
 
-                        <div className="flex flex-col gap-2.5 max-h-60 overflow-y-auto pr-1">
+                        <div className="flex flex-col gap-2.5 max-h-60 overflow-y-auto pr-1 divide-y divide-border/40">
                             {items.map((item) => (
-                                <div key={item.productId} className="flex justify-between text-xs">
-                                    <span className="text-text truncate max-w-[160px]" title={item.product.name}>
-                                        {item.product.name} <span className="text-text-muted">× {item.quantity}</span>
-                                    </span>
-                                    <span className="font-medium text-text">
+                                <div key={`${item.productId}::${item.selectedSize || 'default'}`} className="flex justify-between text-xs pt-2 first:pt-0">
+                                    <div className="min-w-0 pr-2">
+                                        <span className="text-text truncate block max-w-[170px]" title={item.product.name}>
+                                            {item.product.name}
+                                        </span>
+                                        <span className="text-text-muted text-[11px]">
+                                            Qty: {item.quantity}{item.selectedSize ? ` | Size: ${item.selectedSize}` : ''}
+                                        </span>
+                                    </div>
+                                    <span className="font-semibold text-text shrink-0">
                                         {formatCurrency(item.product.price * item.quantity)}
                                     </span>
                                 </div>
                             ))}
                         </div>
 
-                        <div className="border-t border-border pt-3 flex justify-between text-base font-semibold text-text">
-                            <span>Total ({totalItems} items)</span>
-                            <span>{formatCurrency(totalPrice)}</span>
+                        <div className="border-t border-border pt-3 flex flex-col gap-2 text-xs text-text-muted">
+                            <div className="flex justify-between">
+                                <span>Subtotal</span>
+                                <span className="text-text font-medium">{formatCurrency(subtotal)}</span>
+                            </div>
+                            {appliedPromo && discountAmount > 0 && (
+                                <div className="flex justify-between text-emerald-600 font-medium">
+                                    <span>Discount ({appliedPromo.code})</span>
+                                    <span>-{formatCurrency(discountAmount)}</span>
+                                </div>
+                            )}
+                            <div className="flex justify-between items-center">
+                                <span>Shipping</span>
+                                {shippingFee === 0 ? (
+                                    <span className="text-emerald-600 font-bold uppercase text-[10px] px-2 py-0.5 rounded-full bg-emerald-500/10 border border-emerald-500/20">
+                                        FREE
+                                    </span>
+                                ) : (
+                                    <span className="text-text font-medium">{formatCurrency(shippingFee)}</span>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className="border-t border-border pt-3 flex justify-between text-base font-bold text-text items-baseline">
+                            <span>Estimated Total ({totalItems} items)</span>
+                            <span className="text-primary text-xl font-bold">{formatCurrency(finalTotal)}</span>
                         </div>
 
                         <Button
@@ -339,7 +378,7 @@ export function CheckoutPage() {
                             isLoading={isOrderPending || isPaymentProcessing}
                             onClick={handleCheckout}
                         >
-                            {paymentMethod === 'COD' ? 'Confirm Order' : `Pay ${formatCurrency(totalPrice)}`}
+                            {paymentMethod === 'COD' ? 'Confirm Order' : `Pay ${formatCurrency(finalTotal)}`}
                         </Button>
                     </Card>
                 </div>
