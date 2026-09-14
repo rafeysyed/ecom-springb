@@ -14,7 +14,7 @@ spec:
     spec:
       containers:
         - name: eureka-server
-          image: eurekaserver:1.0
+          image: ecomregistry6821.azurecr.io/service-discovery:latest
           ports:
             - containerPort: 8761
 

@@ -12,6 +12,8 @@ import { Package } from 'lucide-react';
 export function ProfilePage() {
     const { data: profile, isLoading } = useProfile();
     const logout = useAuthStore((s) => s.logout);
+    const userName = useAuthStore((s) => s.userName);
+    const userEmail = useAuthStore((s) => s.userEmail);
 
     return (
         <PageContainer className="max-w-md">
@@ -35,10 +37,10 @@ export function ProfilePage() {
             ) : (
                 /* Profile API unavailable — show minimal fallback so page doesn't crash */
                 <Card padding="lg" className="flex flex-col items-center text-center gap-4">
-                    <Avatar name="Account" size="lg" />
+                    <Avatar name={userName || userEmail || 'User'} size="lg" />
                     <div>
-                        <h2 className="text-lg font-semibold text-text">Your Account</h2>
-                        <p className="text-sm text-text-muted mt-1">Profile details couldn't be loaded.</p>
+                        <h2 className="text-lg font-semibold text-text">{userName || 'Your Account'}</h2>
+                        <p className="text-sm text-text-muted mt-1">{userEmail || "Profile details couldn't be loaded."}</p>
                     </div>
                     <div className="w-full flex flex-col gap-2 border-t border-border pt-4">
                         <Link to="/orders">

@@ -2,7 +2,7 @@ name: Build and Deploy to Azure AKS
 
 on:
   push:
-    branches: [ "main" ]
+    branches: [ "main", "ecom" ]
   workflow_dispatch:
 
 env:

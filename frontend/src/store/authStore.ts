@@ -6,11 +6,14 @@ interface AuthState {
     token: string | null;
     userId: string | null;
     roles: string[];
+    userName: string | null;
+    userEmail: string | null;
     isAuthenticated: boolean;
     isHydrated: boolean;
 
     /** Call after a successful POST /internal/auth/login response. */
-    login: (token: string) => void;
+    login: (token: string, userName?: string | null, userEmail?: string | null) => void;
+    setUserInfo: (info: { name?: string | null; email?: string | null }) => void;
     logout: () => void;
     setHydrated: () => void;
 }
@@ -18,7 +21,7 @@ interface AuthState {
 // Synchronously read initial storage if available in browser
 function getInitialStoredAuth() {
     if (typeof window === 'undefined') {
-        return { token: null, userId: null, roles: [], isAuthenticated: false };
+        return { token: null, userId: null, roles: [], userName: null, userEmail: null, isAuthenticated: false };
     }
     try {
         const raw = localStorage.getItem('auth-storage');
@@ -31,6 +34,8 @@ function getInitialStoredAuth() {
                     token,
                     userId: decoded?.sub ?? parsed?.state?.userId ?? null,
                     roles: decoded?.roles ?? parsed?.state?.roles ?? [],
+                    userName: parsed?.state?.userName ?? null,
+                    userEmail: parsed?.state?.userEmail ?? null,
                     isAuthenticated: true,
                 };
             }
@@ -38,7 +43,7 @@ function getInitialStoredAuth() {
     } catch {
         // Fallback on parse error
     }
-    return { token: null, userId: null, roles: [], isAuthenticated: false };
+    return { token: null, userId: null, roles: [], userName: null, userEmail: null, isAuthenticated: false };
 }
 
 const initialAuth = getInitialStoredAuth();
@@ -70,21 +75,32 @@ export const useAuthStore = create<AuthState>()(
             token: initialAuth.token,
             userId: initialAuth.userId,
             roles: initialAuth.roles,
+            userName: initialAuth.userName,
+            userEmail: initialAuth.userEmail,
             isAuthenticated: initialAuth.isAuthenticated,
             isHydrated: true,
 
-            login: (token: string) => {
+            login: (token: string, userName?: string | null, userEmail?: string | null) => {
                 const decoded = decodeToken(token);
-                set({
+                set((state) => ({
                     token,
                     userId: decoded?.sub ?? null,
                     roles: decoded?.roles ?? [],
+                    userName: userName !== undefined ? userName : state.userName,
+                    userEmail: userEmail !== undefined ? userEmail : state.userEmail,
                     isAuthenticated: true,
-                });
+                }));
+            },
+
+            setUserInfo: ({ name, email }) => {
+                set((state) => ({
+                    userName: name !== undefined ? name : state.userName,
+                    userEmail: email !== undefined ? email : state.userEmail,
+                }));
             },
 
             logout: () => {
-                set({ token: null, userId: null, roles: [], isAuthenticated: false });
+                set({ token: null, userId: null, roles: [], userName: null, userEmail: null, isAuthenticated: false });
             },
 
             setHydrated: () => {

@@ -8,8 +8,8 @@ export function useLogin() {
 
     return useMutation({
         mutationFn: (payload: LoginRequest) => login(payload),
-        onSuccess: (data) => {
-            setSession(data.token);
+        onSuccess: (data, variables) => {
+            setSession(data.token, null, variables.email);
         },
     });
-}
+}

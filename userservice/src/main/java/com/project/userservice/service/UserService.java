@@ -65,4 +65,18 @@ public class UserService {
                 user.getEmail()
         );
     }
+
+    public User findUserByEmail(String email) {
+        return userRepository.findByEmail(email).orElse(null);
+    }
+
+    public User provisionOAuthUser(String email, String name, String provider) {
+        return userRepository.findByEmail(email).orElseGet(() -> {
+            User user = new User();
+            user.setEmail(email);
+            user.setName(name != null && !name.isBlank() ? name : email.split("@")[0]);
+            user.setAuthProvider(provider != null ? provider : "OAUTH");
+            return userRepository.save(user);
+        });
+    }
 }
