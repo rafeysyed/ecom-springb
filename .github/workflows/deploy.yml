@@ -29,10 +29,11 @@ jobs:
       # 2. Build all Java microservices
       - name: Build Backend Microservices with Maven
         run: |
+          chmod +x */mvnw || true
           services=("servicediscovery" "gatewayservice" "authservice" "userservice" "productservice" "orderservice" "paymentservice" "inventoryservice")
           for svc in "${services[@]}"; do
             echo "Building $svc..."
-            (cd $svc && ./mvnw clean package -DskipTests)
+            (cd $svc && (mvn clean package -DskipTests || ./mvnw clean package -DskipTests))
           done
 
       # 3. Azure Login
