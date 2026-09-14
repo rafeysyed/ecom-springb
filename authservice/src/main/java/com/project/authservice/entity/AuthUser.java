@@ -18,8 +18,12 @@ public class AuthUser {
     @Id
     private UUID userId;
 
-    @Column(nullable = false)
+    @Column(nullable = true)
     private String passwordHash;
+
+    private String authProvider;
+
+    private String providerId;
 
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

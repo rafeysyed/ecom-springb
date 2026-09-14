@@ -15,6 +15,7 @@ import { OrderConfirmationPage } from '@/pages/OrderConfirmationPage';
 import { OrderTrackingPage } from '@/pages/OrderTrackingPage';
 import { OrderHistoryPage } from '@/pages/OrderHistoryPage';
 import { ProfilePage } from '@/pages/ProfilePage';
+import { OAuthCallbackPage } from '@/pages/OAuthCallbackPage';
 import { NotFoundPage } from '@/pages/NotFoundPage';
 
 // Admin Pages
@@ -33,6 +34,7 @@ const router = createBrowserRouter([
             { path: '/products/:id', element: <ProductDetailPage /> },
             { path: '/login', element: <LoginPage /> },
             { path: '/register', element: <RegisterPage /> },
+            { path: '/oauth/callback', element: <OAuthCallbackPage /> },
             {
                 element: <ProtectedRoute />,
                 children: [

@@ -26,3 +26,4 @@ application-local.yml
 # Temporary files
 *.tmp
 *.temp
+kubeconfig.txt

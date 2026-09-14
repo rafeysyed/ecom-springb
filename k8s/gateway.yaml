@@ -13,22 +13,36 @@ spec:
         app: gateway
     spec:
       containers:
-        - name: gateway
-          image: gateway:1.0
-          imagePullPolicy: Never
+        - name: gateway-service
+          image: ecomregistry6821.azurecr.io/gateway-service:latest
+          imagePullPolicy: IfNotPresent
           ports:
             - containerPort: 8080
-
+          env:
+            - name: EUREKA_CLIENT_SERVICEURL_DEFAULTZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: EUREKA_SERVER_URL
+            - name: JWT_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: JWT_SECRET
+            - name: GATEWAY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: GATEWAY_SECRET
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: gateway
+  name: gateway-service
 spec:
-  type: NodePort
   selector:
     app: gateway
   ports:
     - port: 8080
       targetPort: 8080
-      nodePort: 30080
+  type: ClusterIP

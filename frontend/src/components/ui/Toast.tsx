@@ -20,11 +20,18 @@ const TONE_CLASSES: Record<ToastTone, string> = {
     info: 'bg-text text-white',
 };
 
+function generateToastId(): string {
+    if (typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function') {
+        return crypto.randomUUID();
+    }
+    return `${Date.now()}-${Math.random().toString(36).substring(2, 9)}`;
+}
+
 export function ToastProvider({ children }: { children: ReactNode }) {
     const [toasts, setToasts] = useState<Toast[]>([]);
 
     const showToast = useCallback((message: string, tone: ToastTone = 'info') => {
-        const id = crypto.randomUUID();
+        const id = generateToastId();
         setToasts((prev) => [...prev, { id, message, tone }]);
         setTimeout(() => {
             setToasts((prev) => prev.filter((t) => t.id !== id));

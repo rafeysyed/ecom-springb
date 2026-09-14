@@ -5,6 +5,7 @@ import { decodeToken } from '@/utils/jwt';
 import { Input } from '@/components/ui/Input';
 import { Button } from '@/components/ui/Button';
 import { Card } from '@/components/ui/Card';
+import { SocialLoginButtons } from './SocialLoginButtons';
 
 interface LocationState {
     from?: { pathname: string; search?: string; hash?: string };
@@ -84,7 +85,9 @@ export function LoginForm() {
                 </Button>
             </form>
 
-            <p className="text-sm text-text-muted mt-6 text-center">
+            <SocialLoginButtons className="mt-4" />
+
+            <p className="text-sm text-text-muted mt-5 text-center">
                 Don&apos;t have an account?{' '}
                 <Link to="/register" className="text-primary hover:text-primary-hover font-medium">
                     Create one

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, ChevronDown, Package, UserCircle, LayoutDashboard } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
@@ -7,15 +7,39 @@ import { CartDrawer } from '@/features/cart/components/CartDrawer';
 import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { SearchAutocomplete } from '@/features/products/components/SearchAutocomplete';
+import { useProfile } from '@/features/profile/hooks/useProfile';
 
 export function Header() {
     const navigate = useNavigate();
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const roles = useAuthStore((s) => s.roles);
+    const storedName = useAuthStore((s) => s.userName);
+    const storedEmail = useAuthStore((s) => s.userEmail);
+    const setUserInfo = useAuthStore((s) => s.setUserInfo);
     const logout = useAuthStore((s) => s.logout);
     const totalItems = useCartStore((s) => s.totalItems());
     const [isCartOpen, setIsCartOpen] = useState(false);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
+
+    // Fetch user profile if authenticated
+    const { data: profile } = useProfile();
+
+    // Cache profile name & email in authStore when loaded
+    useEffect(() => {
+        if (profile?.name || profile?.email) {
+            setUserInfo({ name: profile.name, email: profile.email });
+        }
+    }, [profile?.name, profile?.email, setUserInfo]);
+
+    // Compute effective display name & email
+    const effectiveName =
+        profile?.name ||
+        storedName ||
+        (roles.includes('ROLE_ADMIN') ? 'Admin' : '') ||
+        (profile?.email ? profile.email.split('@')[0] : '') ||
+        (storedEmail ? storedEmail.split('@')[0] : '');
+
+    const effectiveEmail = profile?.email || storedEmail || '';
 
     const handleLogout = () => {
         setIsMenuOpen(false);
@@ -61,7 +85,7 @@ export function Header() {
                                 aria-label="Account menu"
                                 aria-expanded={isMenuOpen}
                             >
-                                <Avatar name="Account" size="sm" />
+                                <Avatar name={effectiveName} size="sm" />
                                 <ChevronDown
                                     size={14}
                                     className={`text-text-muted transition-transform duration-150 ${isMenuOpen ? 'rotate-180' : ''}`}
@@ -77,7 +101,19 @@ export function Header() {
                                         onClick={() => setIsMenuOpen(false)}
                                     />
                                     {/* Dropdown panel */}
-                                    <div className="absolute right-0 top-full mt-2 w-48 bg-surface border border-border rounded-lg shadow-soft-hover z-50 py-1 overflow-hidden">
+                                    <div className="absolute right-0 top-full mt-2 w-52 bg-surface border border-border rounded-lg shadow-soft-hover z-50 py-1 overflow-hidden">
+                                        {/* User header */}
+                                        <div className="px-4 py-2.5 border-b border-border bg-surface-muted/40">
+                                            <p className="text-sm font-semibold text-text truncate">
+                                                {effectiveName || 'Signed in'}
+                                            </p>
+                                            {effectiveEmail && (
+                                                <p className="text-xs text-text-muted truncate mt-0.5">
+                                                    {effectiveEmail}
+                                                </p>
+                                            )}
+                                        </div>
+
                                         <Link
                                             to="/profile"
                                             onClick={() => setIsMenuOpen(false)}

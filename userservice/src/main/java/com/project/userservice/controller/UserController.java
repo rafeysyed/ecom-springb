@@ -42,4 +42,23 @@ public class UserController {
     public User getUser(@PathVariable UUID id){
         return userService.getUser(id);
     }
+
+    @GetMapping("/find-by-email")
+    public ResponseEntity<User> findUserByEmail(@RequestParam String email) {
+        User user = userService.findUserByEmail(email);
+        if (user == null) {
+            return ResponseEntity.notFound().build();
+        }
+        return ResponseEntity.ok(user);
+    }
+
+    @PostMapping("/oauth-provision")
+    public ResponseEntity<User> provisionOAuthUser(
+            @RequestParam String email,
+            @RequestParam(required = false) String name,
+            @RequestParam(required = false) String provider
+    ) {
+        User user = userService.provisionOAuthUser(email, name, provider);
+        return ResponseEntity.ok(user);
+    }
 }
