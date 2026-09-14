@@ -36,18 +36,15 @@ jobs:
             (cd $svc && (mvn clean package -DskipTests || ./mvnw clean package -DskipTests))
           done
 
-      # 3. Azure Login
-      - name: Azure Login
-        uses: azure/login@v2
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # 4. Log in to Azure Container Registry (ACR)
+      # 3. Log in to Azure Container Registry (ACR) via Docker Login
       - name: Log in to ACR
-        run: |
-          az acr login --name $ACR_NAME
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME || 'ecomregistry6821' }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-      # 5. Build and Push Docker Images
+      # 4. Build and Push Docker Images
       - name: Build & Push Images to ACR
         run: |
           REGISTRY="${ACR_NAME}.azurecr.io"
@@ -77,14 +74,14 @@ jobs:
           docker push $REGISTRY/inventory-service:latest
           docker push $REGISTRY/frontend:latest
 
-      # 6. Set AKS Context
-      - name: Set AKS Context
-        uses: azure/aks-set-context@v4
+      # 5. Set Kubernetes Context using Kubeconfig
+      - name: Set K8s Context
+        uses: azure/k8s-set-context@v4
         with:
-          resource-group: ${{ env.RESOURCE_GROUP }}
-          cluster-name: ${{ env.CLUSTER_NAME }}
+          method: kubeconfig
+          kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
-      # 7. Update Image Registry in Kubernetes Manifests and Deploy
+      # 6. Update Image Registry in Kubernetes Manifests and Deploy
       - name: Deploy to AKS
         run: |
           REGISTRY="${ACR_NAME}.azurecr.io"
