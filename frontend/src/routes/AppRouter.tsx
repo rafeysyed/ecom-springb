@@ -42,6 +42,7 @@ const router = createBrowserRouter([
                     { path: '/checkout', element: <CheckoutPage /> },
                     { path: '/orders', element: <OrderHistoryPage /> },
                     { path: '/orders/:orderId', element: <OrderTrackingPage /> },
+                    { path: '/orders/:orderId/tracking', element: <OrderTrackingPage /> },
                     { path: '/orders/:orderId/confirmation', element: <OrderConfirmationPage /> },
                     { path: '/profile', element: <ProfilePage /> },
                 ],

@@ -47,6 +47,22 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
                 .getHeaders()
                 .getFirst(HttpHeaders.AUTHORIZATION);
 
+        // Recommendations endpoint: support both authenticated personalization and guest cold-start
+        if (path.startsWith("/recommendations")) {
+            if (authHeader != null && authHeader.startsWith("Bearer ")) {
+                String token = authHeader.substring(7);
+                if (jwtService.validateToken(token)) {
+                    Claims claims = jwtService.extractClaims(token);
+                    String userId = claims.getSubject();
+                    var mutatedRequest = exchange.getRequest().mutate()
+                            .header("X-User-Id", userId)
+                            .build();
+                    return chain.filter(exchange.mutate().request(mutatedRequest).build());
+                }
+            }
+            return chain.filter(exchange);
+        }
+
         if (authHeader == null || !authHeader.startsWith("Bearer ")) {
 
             exchange.getResponse().setStatusCode(HttpStatus.UNAUTHORIZED);
@@ -68,7 +84,8 @@ public class JwtAuthenticationFilter implements GlobalFilter, Ordered {
 
 
         boolean isAdminApi = path.startsWith("/admin");
-        boolean isUserApi = path.startsWith("/getproducts") || path.startsWith("/orders");
+        boolean isUserApi = path.startsWith("/getproducts") || path.startsWith("/orders")
+                || path.startsWith("/internal/users/cart") || path.startsWith("/internal/users/notifications");
 
         if (isAdminApi && !roles.contains("ROLE_ADMIN")) {
 

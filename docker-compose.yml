@@ -101,6 +101,8 @@ services:
     depends_on:
       eureka:
         condition: service_started
+      kafka:
+        condition: service_started
       postgres:
         condition: service_healthy
     environment:
@@ -108,6 +110,7 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/userdb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - microservice-network
 
@@ -186,6 +189,27 @@ services:
       - SPRING_DATASOURCE_URL=jdbc:postgresql://postgres:5432/inventorydb
       - SPRING_DATASOURCE_USERNAME=postgres
       - SPRING_DATASOURCE_PASSWORD=postgres
+    networks:
+      - microservice-network
+
+  recommendation-service:
+    image: recommendation-service
+    build: ./recommendationservice
+    container_name: recommendation-service
+    ports:
+      - "8087:8087"
+    depends_on:
+      eureka:
+        condition: service_started
+      kafka:
+        condition: service_started
+      redis:
+        condition: service_started
+    environment:
+      - JAVA_TOOL_OPTIONS=-Xms128m -Xmx256m
+      - SPRING_DATA_REDIS_HOST=redis
+      - SPRING_DATA_REDIS_PORT=6379
+      - SPRING_KAFKA_BOOTSTRAP_SERVERS=kafka:9092
     networks:
       - microservice-network
 

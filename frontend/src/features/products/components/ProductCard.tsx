@@ -7,6 +7,7 @@ import { PriceTag } from '@/components/ui/PriceTag';
 import { Badge } from '@/components/ui/Badge';
 import { useCartStore } from '@/features/cart/cartStore';
 import { useToast } from '@/components/ui/Toast';
+import { recommendationsApi } from '@/api/endpoints/recommendations';
 
 interface ProductCardProps {
     product: Product;
@@ -19,6 +20,7 @@ export function ProductCard({ product }: ProductCardProps) {
     const handleAddToCart = (e: React.MouseEvent) => {
         e.preventDefault(); // don't navigate when clicking the add button inside the Link
         addItem(product, 1);
+        recommendationsApi.trackInteraction(product.id, 'CART_ADD');
         showToast(`Added "${product.name}" to cart`, 'success');
     };
 
