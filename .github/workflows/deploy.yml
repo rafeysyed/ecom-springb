@@ -51,11 +51,11 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      - name: Build JAR with Maven
+      - name: Run Unit Tests and Build JAR
         run: |
           cd ${{ matrix.service.name }}
           chmod +x ./mvnw || true
-          mvn clean package -DskipTests || ./mvnw clean package -DskipTests
+          mvn clean test package || ./mvnw clean test package
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
