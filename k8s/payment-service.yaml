@@ -41,6 +41,11 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: KAFKA_BOOTSTRAP_SERVERS
+            - name: GATEWAY_SECRET
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: GATEWAY_SECRET
 ---
 apiVersion: v1
 kind: Service

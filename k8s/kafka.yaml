@@ -12,6 +12,7 @@ spec:
       labels:
         app: kafka
     spec:
+      enableServiceLinks: false
       hostname: kafka
       containers:
         - name: kafka
