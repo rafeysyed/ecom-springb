@@ -148,6 +148,10 @@ jobs:
           # Enforce imagePullPolicy: Always so AKS always fetches the latest built images
           sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" k8s/*.yaml
 
+          # Wait for AKS worker nodes to be completely online and ready
+          echo "Waiting for AKS worker nodes to be ready..."
+          kubectl wait --for=condition=Ready nodes --all --timeout=180s || true
+
           # Apply config maps and secrets first
           kubectl apply -f k8s/configmap.yaml
           kubectl apply -f k8s/secret.yaml
@@ -157,7 +161,7 @@ jobs:
 
       - name: Verify Deployment Rollout Health
         run: |
-          echo "Verifying rollout status for all deployed workloads..."
+          echo "Verifying rollout status for all deployed workloads (allowing up to 5 minutes per service)..."
           deployments=(
             "eureka-server"
             "gateway"
@@ -173,7 +177,7 @@ jobs:
 
           for dep in "${deployments[@]}"; do
             echo "Checking deployment/$dep..."
-            if ! kubectl rollout status deployment/"$dep" --timeout=150s; then
+            if ! kubectl rollout status deployment/"$dep" --timeout=300s; then
               echo "❌ Deployment $dep failed to become healthy!"
               echo "--- Deployment Description ---"
               kubectl describe deployment/"$dep" || true
