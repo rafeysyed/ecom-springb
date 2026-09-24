@@ -12,6 +12,7 @@ import com.project.orderservice.entity.Order;
 import com.project.orderservice.entity.OrderItem;
 import com.project.orderservice.entity.OrderStatus;
 import com.project.orderservice.event.OrderCreatedEvent;
+import com.project.orderservice.event.OrderStatusEvent;
 import com.project.orderservice.exception.InvalidOrderException;
 import com.project.orderservice.exception.ResourceNotFoundException;
 import com.project.orderservice.mapper.OrderMapper;
@@ -26,6 +27,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -134,8 +136,13 @@ public class OrderService {
                 savedOrder.getTotalAmount().toString()
         );
 
-
         orderEventProducer.sendOrderCreatedEvent(event);
+
+        publishOrderStatusNotification(
+                savedOrder,
+                "Order Placed Successfully",
+                "Your order #" + savedOrder.getId() + " has been placed and is awaiting payment."
+        );
 
         return OrderMapper.mapToResponse(savedOrder);
     }
@@ -181,6 +188,28 @@ public class OrderService {
         order.setStatus(newStatus);
 
         Order savedOrder = orderRepository.save(order);
+
+        String title;
+        String message;
+        switch (newStatus) {
+            case SHIPPED -> {
+                title = "Order Shipped 🚚";
+                message = "Great news! Your order #" + savedOrder.getId() + " is on its way.";
+            }
+            case DELIVERED -> {
+                title = "Order Delivered 🎉";
+                message = "Your package for order #" + savedOrder.getId() + " has arrived. Enjoy your items!";
+            }
+            case CANCELLED -> {
+                title = "Order Cancelled 🛑";
+                message = "Your order #" + savedOrder.getId() + " has been cancelled.";
+            }
+            default -> {
+                title = "Order Update: " + newStatus.name();
+                message = "Your order #" + savedOrder.getId() + " status is now " + newStatus.name() + ".";
+            }
+        }
+        publishOrderStatusNotification(savedOrder, title, message);
 
         return OrderMapper.mapToResponse(savedOrder);
     }
@@ -240,7 +269,21 @@ public class OrderService {
               throw new RuntimeException("Unknown status"+status);
       }
 
-        orderRepository.save(order);
+        Order savedOrder = orderRepository.save(order);
+
+        if (savedOrder.getStatus() == OrderStatus.PAID) {
+            publishOrderStatusNotification(
+                    savedOrder,
+                    "Payment Confirmed 💳",
+                    "Payment for order #" + savedOrder.getId() + " was successful. We are preparing your order for shipment."
+            );
+        } else if (savedOrder.getStatus() == OrderStatus.FAILED) {
+            publishOrderStatusNotification(
+                    savedOrder,
+                    "Payment Failed ⚠️",
+                    "Payment for order #" + savedOrder.getId() + " could not be processed. Please retry checkout."
+            );
+        }
 
         log.info("Order status updated to {}", status);
     }
@@ -281,7 +324,31 @@ public class OrderService {
             }
         }
 
+        String refundNote = (previousStatus == OrderStatus.PAID) ? " A full refund has been initiated to your original payment method." : "";
+        publishOrderStatusNotification(
+                savedOrder,
+                "Order Cancelled 🛑",
+                "Your order #" + savedOrder.getId() + " has been cancelled." + refundNote
+        );
+
         return OrderMapper.mapToResponse(savedOrder);
+    }
+
+    private void publishOrderStatusNotification(Order order, String title, String message) {
+        try {
+            OrderStatusEvent statusEvent = OrderStatusEvent.builder()
+                    .orderId(order.getId().toString())
+                    .userId(order.getUserId().toString())
+                    .status(order.getStatus().name())
+                    .title(title)
+                    .message(message)
+                    .trackingUrl("/orders/" + order.getId() + "/tracking")
+                    .timestamp(Instant.now())
+                    .build();
+            orderEventProducer.sendOrderStatusEvent(statusEvent);
+        } catch (Exception e) {
+            log.error("Failed to publish order status notification for order {}: {}", order.getId(), e.getMessage());
+        }
     }
 
     //RestTemplate is knowledge purpose, we use modern way(Feign Client) in our project

@@ -1,6 +1,7 @@
 import { Sparkles, Plus } from 'lucide-react';
 import { useProducts } from '@/features/products/hooks/useProducts';
 import { useCart } from '@/features/cart/hooks/useCart';
+import { useFrequentlyBoughtTogether } from '@/features/recommendations/hooks/useRecommendations';
 import { formatCurrency } from '@/utils/formatCurrency';
 import { useToast } from '@/components/ui/Toast';
 
@@ -10,16 +11,22 @@ interface CartCrossSellProps {
 }
 
 export function CartCrossSell({ className = '', maxDisplay = 3 }: CartCrossSellProps) {
-    const { data: products } = useProducts();
+    const { data: allProducts } = useProducts();
     const { items, addItem } = useCart();
     const { showToast } = useToast();
 
-    if (!products || products.length === 0) return null;
+    const lastProductId = items.length > 0 ? items[items.length - 1].productId : undefined;
+    const { data: recData } = useFrequentlyBoughtTogether(lastProductId, maxDisplay);
 
     const cartProductIds = new Set(items.map((i) => i.productId));
-    const recommendations = products
+
+    // Prefer ML-based frequently bought together, fall back to general stock items
+    const mlProducts = (recData?.products ?? []).filter((p) => !cartProductIds.has(p.id) && p.inStock);
+    const fallbackProducts = (allProducts ?? [])
         .filter((p) => !cartProductIds.has(p.id) && p.inStock)
         .slice(0, maxDisplay);
+
+    const recommendations = mlProducts.length > 0 ? mlProducts.slice(0, maxDisplay) : fallbackProducts;
 
     if (recommendations.length === 0) return null;
 

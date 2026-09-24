@@ -12,12 +12,13 @@ import { LoadingState } from '@/components/feedback/LoadingState';
 import { ErrorState } from '@/components/feedback/ErrorState';
 import { useProduct } from '@/features/products/hooks/useProduct';
 import { useRecentlyViewed } from '@/features/products/hooks/useRecentlyViewed';
-import { RecentlyViewedSection } from '@/features/products/components/RecentlyViewedSection';
 import { SimilarProductsSection } from '@/features/products/components/SimilarProductsSection';
 import { useCartStore } from '@/features/cart/cartStore';
 import { useToast } from '@/components/ui/Toast';
 import { useSearch } from '@/context/SearchContext';
 import { parseImageUrls, parseAvailableSizes } from '@/api/types/product.types';
+import { useTrackInteraction } from '@/features/recommendations/hooks/useTrackInteraction';
+import { recommendationsApi } from '@/api/endpoints/recommendations';
 
 export function ProductDetailPage() {
     const { id } = useParams<{ id: string }>();
@@ -28,6 +29,8 @@ export function ProductDetailPage() {
     const { showToast } = useToast();
     const [quantity, setQuantity] = useState(1);
     const [selectedSize, setSelectedSize] = useState<string>('');
+
+    useTrackInteraction(id, 'VIEW');
 
     useEffect(() => {
         if (product) {
@@ -66,6 +69,7 @@ export function ProductDetailPage() {
 
     const handleAddToCart = () => {
         addItem(product, quantity, selectedSize || product.size || undefined, product.color || undefined);
+        recommendationsApi.trackInteraction(product.id, 'CART_ADD');
         showToast(
             `Added ${quantity} × "${product.name}"${selectedSize ? ` (${selectedSize})` : ''} to cart`,
             'success'
@@ -151,11 +155,10 @@ export function ProductDetailPage() {
                                         key={size}
                                         type="button"
                                         onClick={() => setSelectedSize(size)}
-                                        className={`px-3.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${
-                                            selectedSize === size
+                                        className={`px-3.5 py-1.5 rounded-lg text-xs font-medium border transition-all ${selectedSize === size
                                                 ? 'border-primary bg-primary/10 text-primary shadow-xs font-bold'
                                                 : 'border-border text-text hover:border-text-muted/60 bg-surface'
-                                        }`}
+                                            }`}
                                     >
                                         {size}
                                     </button>
@@ -197,15 +200,10 @@ export function ProductDetailPage() {
             </div>
 
             <SimilarProductsSection
+                product={product}
                 productId={product.id}
                 className="mt-16 border-t border-border pt-10"
-                maxDisplay={4}
-            />
-
-            <RecentlyViewedSection
-                excludeProductId={product.id}
-                className="mt-12 border-t border-border pt-10"
-                maxDisplay={4}
+                maxDisplay={12}
             />
         </PageContainer>
     );

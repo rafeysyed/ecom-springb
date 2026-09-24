@@ -11,14 +11,39 @@ env:
   CLUSTER_NAME: ${{ secrets.AKS_CLUSTER_NAME || 'ecom-aks' }}
 
 jobs:
-  build-and-deploy:
+  # ---------------------------------------------------------------------------
+  # 1. Parallel Build & Push for Backend Spring Boot Microservices
+  # ---------------------------------------------------------------------------
+  build-and-push-backend:
+    name: Build ${{ matrix.service.image }}
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        service:
+          - name: servicediscovery
+            image: service-discovery
+          - name: gatewayservice
+            image: gateway-service
+          - name: authservice
+            image: auth-service
+          - name: userservice
+            image: user-service
+          - name: productservice
+            image: product-service
+          - name: orderservice
+            image: order-service
+          - name: paymentservice
+            image: payment-service
+          - name: inventoryservice
+            image: inventory-service
+          - name: recommendationservice
+            image: recommendation-service
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # 1. Setup Java 17 for Spring Boot microservices
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
@@ -26,78 +51,140 @@ jobs:
           distribution: 'temurin'
           cache: maven
 
-      # 2. Build all Java microservices
-      - name: Build Backend Microservices with Maven
+      - name: Run Unit Tests and Build JAR
         run: |
-          chmod +x */mvnw || true
-          services=("servicediscovery" "gatewayservice" "authservice" "userservice" "productservice" "orderservice" "paymentservice" "inventoryservice")
-          for svc in "${services[@]}"; do
-            echo "Building $svc..."
-            (cd $svc && (mvn clean package -DskipTests || ./mvnw clean package -DskipTests))
-          done
+          cd ${{ matrix.service.name }}
+          chmod +x ./mvnw || true
+          mvn clean test package || ./mvnw clean test package
 
-      # 3. Log in to Azure Container Registry (ACR) via Docker Login
-      - name: Log in to ACR
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Azure Container Registry
         uses: docker/login-action@v3
         with:
           registry: ${{ env.ACR_NAME }}.azurecr.io
           username: ${{ secrets.ACR_USERNAME || 'ecomregistry6821' }}
           password: ${{ secrets.ACR_PASSWORD }}
 
-      # 4. Build and Push Docker Images
-      - name: Build & Push Images to ACR
-        run: |
-          REGISTRY="${ACR_NAME}.azurecr.io"
-          TAG="${{ github.sha }}"
+      - name: Build and Push Docker Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./${{ matrix.service.name }}
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service.image }}:${{ github.sha }}
+            ${{ env.ACR_NAME }}.azurecr.io/${{ matrix.service.image }}:latest
+          cache-from: type=gha,scope=${{ matrix.service.image }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service.image }}
 
-          # Backend images
-          docker build -t $REGISTRY/service-discovery:$TAG -t $REGISTRY/service-discovery:latest ./servicediscovery
-          docker build -t $REGISTRY/gateway-service:$TAG -t $REGISTRY/gateway-service:latest ./gatewayservice
-          docker build -t $REGISTRY/auth-service:$TAG -t $REGISTRY/auth-service:latest ./authservice
-          docker build -t $REGISTRY/user-service:$TAG -t $REGISTRY/user-service:latest ./userservice
-          docker build -t $REGISTRY/product-service:$TAG -t $REGISTRY/product-service:latest ./productservice
-          docker build -t $REGISTRY/order-service:$TAG -t $REGISTRY/order-service:latest ./orderservice
-          docker build -t $REGISTRY/payment-service:$TAG -t $REGISTRY/payment-service:latest ./paymentservice
-          docker build -t $REGISTRY/inventory-service:$TAG -t $REGISTRY/inventory-service:latest ./inventoryservice
+  # ---------------------------------------------------------------------------
+  # 2. Build & Push Frontend (React + Vite + Nginx)
+  # ---------------------------------------------------------------------------
+  build-and-push-frontend:
+    name: Build frontend
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
-          # Frontend image
-          docker build -t $REGISTRY/frontend:$TAG -t $REGISTRY/frontend:latest ./frontend
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
 
-          # Push to ACR
-          docker push $REGISTRY/service-discovery:latest
-          docker push $REGISTRY/gateway-service:latest
-          docker push $REGISTRY/auth-service:latest
-          docker push $REGISTRY/user-service:latest
-          docker push $REGISTRY/product-service:latest
-          docker push $REGISTRY/order-service:latest
-          docker push $REGISTRY/payment-service:latest
-          docker push $REGISTRY/inventory-service:latest
-          docker push $REGISTRY/frontend:latest
+      - name: Log in to Azure Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.ACR_NAME }}.azurecr.io
+          username: ${{ secrets.ACR_USERNAME || 'ecomregistry6821' }}
+          password: ${{ secrets.ACR_PASSWORD }}
 
-      # 5. Set Kubernetes Context using Kubeconfig
-      - name: Set K8s Context
+      - name: Build and Push Frontend Image
+        uses: docker/build-push-action@v5
+        with:
+          context: ./frontend
+          push: true
+          tags: |
+            ${{ env.ACR_NAME }}.azurecr.io/frontend:${{ github.sha }}
+            ${{ env.ACR_NAME }}.azurecr.io/frontend:latest
+          cache-from: type=gha,scope=frontend
+          cache-to: type=gha,mode=max,scope=frontend
+
+  # ---------------------------------------------------------------------------
+  # 3. Continuous Deployment to AKS with Health Rollout Checks
+  # ---------------------------------------------------------------------------
+  deploy-to-aks:
+    name: Deploy to Azure AKS
+    runs-on: ubuntu-latest
+    needs: [build-and-push-backend, build-and-push-frontend]
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set Kubernetes Context
         uses: azure/k8s-set-context@v4
         with:
           method: kubeconfig
           kubeconfig: ${{ secrets.KUBE_CONFIG }}
 
-      # 6. Update Image Registry in Kubernetes Manifests and Deploy
-      - name: Deploy to AKS
+      - name: Update Manifests with Immutable SHA & Deploy
         run: |
           REGISTRY="${ACR_NAME}.azurecr.io"
+          TAG="${{ github.sha }}"
 
-          # Replace local image references with ACR registry
-          sed -i "s|image: service-discovery:latest|image: $REGISTRY/service-discovery:latest|g" k8s/eureka.yaml
-          sed -i "s|image: gateway-service:latest|image: $REGISTRY/gateway-service:latest|g" k8s/gateway.yaml
-          sed -i "s|image: auth-service:latest|image: $REGISTRY/auth-service:latest|g" k8s/auth-service.yaml
-          sed -i "s|image: user-service:latest|image: $REGISTRY/user-service:latest|g" k8s/user-service.yaml
-          sed -i "s|image: product-service:latest|image: $REGISTRY/product-service:latest|g" k8s/product-service.yaml
-          sed -i "s|image: order-service:latest|image: $REGISTRY/order-service:latest|g" k8s/order-service.yaml
-          sed -i "s|image: payment-service:latest|image: $REGISTRY/payment-service:latest|g" k8s/payment-service.yaml
-          sed -i "s|image: inventory-service:latest|image: $REGISTRY/inventory-service:latest|g" k8s/inventory-service.yaml
-          sed -i "s|image: frontend:latest|image: $REGISTRY/frontend:latest|g" k8s/frontend.yaml
+          echo "Deploying version tag: $TAG from registry: $REGISTRY"
 
-          # Apply all manifests to Kubernetes
+          # Replace image tags with the immutable commit SHA
+          sed -i "s|image: .*service-discovery:.*|image: $REGISTRY/service-discovery:$TAG|g" k8s/eureka.yaml
+          sed -i "s|image: .*gateway-service:.*|image: $REGISTRY/gateway-service:$TAG|g" k8s/gateway.yaml
+          sed -i "s|image: .*auth-service:.*|image: $REGISTRY/auth-service:$TAG|g" k8s/auth-service.yaml
+          sed -i "s|image: .*user-service:.*|image: $REGISTRY/user-service:$TAG|g" k8s/user-service.yaml
+          sed -i "s|image: .*product-service:.*|image: $REGISTRY/product-service:$TAG|g" k8s/product-service.yaml
+          sed -i "s|image: .*order-service:.*|image: $REGISTRY/order-service:$TAG|g" k8s/order-service.yaml
+          sed -i "s|image: .*payment-service:.*|image: $REGISTRY/payment-service:$TAG|g" k8s/payment-service.yaml
+          sed -i "s|image: .*inventory-service:.*|image: $REGISTRY/inventory-service:$TAG|g" k8s/inventory-service.yaml
+          sed -i "s|image: .*recommendation-service:.*|image: $REGISTRY/recommendation-service:$TAG|g" k8s/recommendation-service.yaml
+          sed -i "s|image: .*frontend:.*|image: $REGISTRY/frontend:$TAG|g" k8s/frontend.yaml
+
+          # Enforce imagePullPolicy: Always so AKS always fetches the latest built images
+          sed -i "s|imagePullPolicy: IfNotPresent|imagePullPolicy: Always|g" k8s/*.yaml
+
+          # Wait for AKS worker nodes to be completely online and ready
+          echo "Waiting for AKS worker nodes to be ready..."
+          kubectl wait --for=condition=Ready nodes --all --timeout=180s || true
+
+          # Apply config maps and secrets first
           kubectl apply -f k8s/configmap.yaml
           kubectl apply -f k8s/secret.yaml
+
+          # Apply all remaining Kubernetes manifests
           kubectl apply -f k8s/
+
+      - name: Verify Deployment Rollout Health
+        run: |
+          echo "Verifying rollout status for all deployed workloads (allowing up to 5 minutes per service)..."
+          deployments=(
+            "eureka-server"
+            "gateway"
+            "auth-service"
+            "user-service"
+            "product-service"
+            "recommendation-service"
+            "order-service"
+            "payment-service"
+            "inventory-service"
+            "frontend"
+          )
+
+          for dep in "${deployments[@]}"; do
+            echo "Checking deployment/$dep..."
+            if ! kubectl rollout status deployment/"$dep" --timeout=300s; then
+              echo "❌ Deployment $dep failed to become healthy!"
+              echo "--- Deployment Description ---"
+              kubectl describe deployment/"$dep" || true
+              echo "--- Recent Pod Logs ---"
+              kubectl logs -l app="$dep" --tail=50 || true
+              exit 1
+            fi
+          done
+
+          echo "🎉 All microservices and frontend have successfully rolled out and are healthy on Azure AKS!"

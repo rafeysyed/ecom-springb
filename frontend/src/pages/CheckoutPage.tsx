@@ -13,6 +13,7 @@ import { useToast } from '@/components/ui/Toast';
 import { processPayment, confirm3ds } from '@/api/endpoints/payments';
 import type { PaymentMethod } from '@/api/types/payment.types';
 import { ThreeDSecureModal } from '@/features/orders/components/ThreeDSecureModal';
+import { recommendationsApi } from '@/api/endpoints/recommendations';
 
 export function CheckoutPage() {
     const {
@@ -82,6 +83,10 @@ export function CheckoutPage() {
 
             // Step 3: Handle Result
             if (paymentResult.status === 'SUCCESS') {
+                // Track PURCHASE interactions for ML recommendations before clearing cart
+                items.forEach((item) => {
+                    recommendationsApi.trackInteraction(item.productId, 'PURCHASE');
+                });
                 clearCart();
                 showToast('Payment successful! Your order has been placed.', 'success');
                 navigate(`/orders/${orderId}/confirmation`);
@@ -109,6 +114,10 @@ export function CheckoutPage() {
             const res = await confirm3ds({ orderId: activeOrderId, otp });
             if (res.status === 'SUCCESS') {
                 setIsThreeDsOpen(false);
+                // Track PURCHASE interactions for ML recommendations before clearing cart
+                items.forEach((item) => {
+                    recommendationsApi.trackInteraction(item.productId, 'PURCHASE');
+                });
                 clearCart();
                 showToast('3D Secure verified successfully! Order placed.', 'success');
                 navigate(`/orders/${activeOrderId}/confirmation`);

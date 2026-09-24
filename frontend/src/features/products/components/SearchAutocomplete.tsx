@@ -1,8 +1,9 @@
 import { useState, useRef, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, X, Folder, Tag, ArrowRight } from 'lucide-react';
+import { Search, X, Folder, Tag, ArrowRight, Sparkles, History, Trash2 } from 'lucide-react';
 import { useSearch } from '@/context/SearchContext';
 import { useProducts } from '@/features/products/hooks/useProducts';
+import { useRecentlyViewed } from '@/features/products/hooks/useRecentlyViewed';
 import { formatCurrency } from '@/utils/formatCurrency';
 import Fuse from 'fuse.js';
 
@@ -22,6 +23,7 @@ export function SearchAutocomplete() {
     const inputRef = useRef<HTMLInputElement>(null);
 
     const { data: products } = useProducts();
+    const { recentlyViewed, clearRecentlyViewed } = useRecentlyViewed();
 
     // Sync input value with context search
     useEffect(() => {
@@ -80,6 +82,14 @@ export function SearchAutocomplete() {
             brandCounts: Array.from(brandMap.entries()).map(([name, count]) => ({ name, count })),
         };
     }, [products]);
+
+    // Top brands to showcase for "Continue browsing these brands"
+    const topBrowsingBrands = useMemo(() => {
+        if (!brandCounts || brandCounts.length === 0) return [];
+        return [...brandCounts]
+            .sort((a, b) => b.count - a.count)
+            .slice(0, 6);
+    }, [brandCounts]);
 
     // Build Fuse for products
     const productFuse = useMemo(() => {
@@ -224,6 +234,91 @@ export function SearchAutocomplete() {
             {/* Autocomplete Overlay */}
             {isOpen && (
                 <div className="absolute top-full left-0 right-0 mt-2 bg-surface rounded-xl border border-border shadow-soft-hover z-50 overflow-hidden text-sm divide-y divide-border animate-in fade-in zoom-in-95 duration-150 max-h-[75vh] overflow-y-auto">
+                    {/* Recently Viewed in Search */}
+                    {recentlyViewed.length > 0 && (
+                        <div className="p-3 bg-surface">
+                            <div className="flex items-center justify-between px-2 mb-2">
+                                <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                                    <History size={13} className="text-primary" />
+                                    Recently Viewed
+                                </span>
+                                <button
+                                    type="button"
+                                    onClick={(e) => {
+                                        e.preventDefault();
+                                        e.stopPropagation();
+                                        clearRecentlyViewed();
+                                    }}
+                                    className="text-[10px] text-text-muted hover:text-danger flex items-center gap-1 transition-colors px-1.5 py-0.5 rounded hover:bg-surface-muted"
+                                    title="Clear recently viewed history"
+                                >
+                                    <Trash2 size={11} />
+                                    <span>Clear</span>
+                                </button>
+                            </div>
+                            <div className="flex gap-2 overflow-x-auto pb-1 px-1" style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}>
+                                {recentlyViewed.slice(0, 5).map((item) => (
+                                    <button
+                                        key={item.id}
+                                        type="button"
+                                        onClick={() => {
+                                            setIsOpen(false);
+                                            navigate(`/products/${item.id}`);
+                                        }}
+                                        className="flex items-center gap-2 p-1.5 rounded-lg border border-border bg-surface-muted/40 hover:bg-surface-muted hover:border-primary/40 transition-all shrink-0 w-[180px] text-left group"
+                                    >
+                                        <div className="w-10 h-10 rounded-md overflow-hidden bg-surface shrink-0">
+                                            <img
+                                                src={item.mainImage}
+                                                alt={item.name}
+                                                className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                            />
+                                        </div>
+                                        <div className="min-w-0 flex-1">
+                                            <span className="text-[10px] font-bold text-text-muted uppercase tracking-wider block truncate">
+                                                {item.brand || 'Item'}
+                                            </span>
+                                            <p className="text-xs font-semibold text-text truncate group-hover:text-primary transition-colors">
+                                                {item.name}
+                                            </p>
+                                            <span className="text-[11px] font-bold text-text block">
+                                                {formatCurrency(item.price, item.currency)}
+                                            </span>
+                                        </div>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Continue Browsing These Brands (Myntra-style brand discovery) */}
+                    {topBrowsingBrands.length > 0 && (
+                        <div className="p-3 bg-surface-muted/30">
+                            <div className="flex items-center justify-between px-2 mb-2">
+                                <span className="text-[11px] font-bold text-text-muted uppercase tracking-wider flex items-center gap-1.5">
+                                    <Sparkles size={13} className="text-primary" />
+                                    Continue browsing these brands
+                                </span>
+                            </div>
+                            <div className="flex flex-wrap gap-1.5 px-1">
+                                {topBrowsingBrands.map((brand) => (
+                                    <button
+                                        key={brand.name}
+                                        type="button"
+                                        onClick={() => handleSelectBrand(brand.name)}
+                                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-surface hover:bg-primary-light hover:text-primary hover:border-primary/40 transition-all text-xs font-semibold text-text border border-border/80 shadow-2xs group"
+                                    >
+                                        <Tag size={12} className="text-text-muted group-hover:text-primary transition-colors" />
+                                        <span>{brand.name}</span>
+                                        <span className="text-[10px] text-text-muted px-1.5 py-0.5 rounded-full bg-surface-muted">
+                                            {brand.count}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     {/* Categories Suggestions */}
                     {suggestions.matchedCategories.length > 0 && (
                         <div className="p-3">

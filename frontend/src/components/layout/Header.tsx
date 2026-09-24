@@ -8,6 +8,7 @@ import { Avatar } from '@/components/ui/Avatar';
 import { Button } from '@/components/ui/Button';
 import { SearchAutocomplete } from '@/features/products/components/SearchAutocomplete';
 import { useProfile } from '@/features/profile/hooks/useProfile';
+import { NotificationBell } from '@/features/notifications/components/NotificationBell';
 
 export function Header() {
     const navigate = useNavigate();
@@ -75,6 +76,9 @@ export function Header() {
                             </span>
                         )}
                     </button>
+
+                    {/* Notification bell */}
+                    {isAuthenticated && <NotificationBell />}
 
                     {isAuthenticated ? (
                         <div className="relative">
