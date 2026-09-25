@@ -20,7 +20,10 @@ export function useUpdateOrderStatus() {
             updateOrderStatus(orderId, status),
         onSuccess: (updatedOrder) => {
             queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
-            queryClient.invalidateQueries({ queryKey: ['orders', updatedOrder.orderId] });
+            queryClient.invalidateQueries({ queryKey: ['orders'] });
+            if (updatedOrder?.orderId) {
+                queryClient.setQueryData(['orders', updatedOrder.orderId], updatedOrder);
+            }
             showToast(`Order status updated to ${updatedOrder.status}`, 'success');
         },
         onError: (err: any) => {

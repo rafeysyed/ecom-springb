@@ -5,7 +5,7 @@ interface OrderStatusBadgeProps {
     status?: OrderStatus;
 }
 
-const STATUS_TONE: Record<string, 'pending' | 'confirmed' | 'shipped' | 'cancelled'> = {
+const STATUS_TONE: Record<string, 'pending' | 'confirmed' | 'shipped' | 'cancelled' | 'success'> = {
     CREATED: 'pending',
     PENDING: 'pending',
     PAYMENT_PENDING: 'pending',
@@ -13,7 +13,7 @@ const STATUS_TONE: Record<string, 'pending' | 'confirmed' | 'shipped' | 'cancell
     PAID: 'confirmed',
     CONFIRMED: 'confirmed',
     SHIPPED: 'shipped',
-    DELIVERED: 'confirmed',
+    DELIVERED: 'success',
     FAILED: 'cancelled',
     CANCELLED: 'cancelled',
 };

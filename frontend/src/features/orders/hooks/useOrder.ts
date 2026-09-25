@@ -1,17 +1,20 @@
 import { useQuery } from '@tanstack/react-query';
 import { getOrder } from '@/api/endpoints/orders';
 
-const NON_FINAL_STATUSES = new Set(['CREATED', 'PENDING', 'PAYMENT_PENDING']);
+const FINAL_STATUSES = new Set(['DELIVERED', 'CANCELLED', 'FAILED']);
 
 export function useOrder(orderId: string | undefined) {
     return useQuery({
         queryKey: ['orders', orderId],
         queryFn: () => getOrder(orderId as string),
         enabled: !!orderId,
-        // Poll every 2s while order is still in CREATED/PENDING status to reflect saga transitions immediately
+        staleTime: 0,
+        refetchOnMount: 'always',
+        // Poll every 2.5s until order reaches a terminal state (DELIVERED, CANCELLED, FAILED)
         refetchInterval: (query) => {
             const status = query.state.data?.status;
-            return status && NON_FINAL_STATUSES.has(status.toUpperCase()) ? 2_000 : false;
+            if (!status) return 2_500;
+            return !FINAL_STATUSES.has(status.toUpperCase()) ? 2_500 : false;
         },
     });
 }

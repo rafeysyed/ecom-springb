@@ -41,7 +41,7 @@ export function OrderTrackingPage() {
 
     const totalAmount = order.totalAmount ?? order.totalPrice ?? 0;
     const totalItems = (order.items || []).reduce((sum, i) => sum + i.quantity, 0);
-    const isCancellable = ['PAID', 'CREATED', 'PAYMENT_PENDING', 'CONFIRMED'].includes(
+    const isCancellable = ['PAID', 'CREATED', 'PAYMENT_PENDING', 'PAYMENT_COMPLETED', 'CONFIRMED'].includes(
         order.status?.toUpperCase()
     );
 

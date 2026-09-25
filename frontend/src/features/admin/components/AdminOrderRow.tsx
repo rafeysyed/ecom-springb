@@ -73,15 +73,26 @@ export function AdminOrderRow({ order }: AdminOrderRowProps) {
                 {/* State Machine Transition Actions */}
                 <div className="flex items-center gap-2">
                     {status === 'PAID' && (
-                        <Button
-                            size="sm"
-                            isLoading={isPending}
-                            onClick={() => handleAdvance('SHIPPED')}
-                            className="text-xs"
-                        >
-                            <Truck size={14} className="mr-1.5" />
-                            Dispatch / Mark Shipped
-                        </Button>
+                        <>
+                            <Button
+                                size="sm"
+                                isLoading={isPending}
+                                onClick={() => handleAdvance('SHIPPED')}
+                                className="text-xs"
+                            >
+                                <Truck size={14} className="mr-1.5" />
+                                Dispatch / Shipped
+                            </Button>
+                            <Button
+                                size="sm"
+                                isLoading={isPending}
+                                onClick={() => handleAdvance('DELIVERED')}
+                                className="bg-success text-white hover:bg-success/90 text-xs"
+                            >
+                                <Check size={14} className="mr-1.5" />
+                                Mark as Delivered
+                            </Button>
+                        </>
                     )}
 
                     {status === 'SHIPPED' && (
@@ -93,6 +104,18 @@ export function AdminOrderRow({ order }: AdminOrderRowProps) {
                         >
                             <Check size={14} className="mr-1.5" />
                             Mark as Delivered
+                        </Button>
+                    )}
+
+                    {(status === 'PAID' || status === 'SHIPPED') && (
+                        <Button
+                            size="sm"
+                            variant="secondary"
+                            isLoading={isPending}
+                            onClick={() => handleAdvance('CANCELLED')}
+                            className="text-danger hover:text-danger hover:border-danger/40 border-border text-xs"
+                        >
+                            Cancel
                         </Button>
                     )}
 

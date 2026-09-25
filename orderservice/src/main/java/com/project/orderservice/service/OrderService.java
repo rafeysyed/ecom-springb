@@ -185,9 +185,29 @@ public class OrderService {
 
         validateStatusTransition(order.getStatus(),newStatus);
 
+        OrderStatus previousStatus = order.getStatus();
         order.setStatus(newStatus);
 
         Order savedOrder = orderRepository.save(order);
+
+        // If order was cancelled by admin, restock inventory and refund if paid
+        if (newStatus == OrderStatus.CANCELLED) {
+            try {
+                inventoryClient.releaseReservation(orderId);
+                log.info("Released/Restocked inventory for order {} cancelled by admin", orderId);
+            } catch (Exception e) {
+                log.error("Error communicating with inventory service during admin order cancellation for {}: {}", orderId, e.getMessage());
+            }
+
+            if (previousStatus == OrderStatus.PAID || previousStatus == OrderStatus.PAYMENT_COMPLETED) {
+                try {
+                    paymentClient.refundPayment(new com.project.orderservice.dto.payment.PaymentRefundRequest(orderId.toString(), null, "ORDER_CANCELLED_BY_ADMIN"));
+                    log.info("Triggered payment refund for order {} cancelled by admin", orderId);
+                } catch (Exception e) {
+                    log.error("Error communicating with payment service for refund on admin-cancelled order {}: {}", orderId, e.getMessage());
+                }
+            }
+        }
 
         String title;
         String message;
@@ -216,24 +236,31 @@ public class OrderService {
 
     private void validateStatusTransition(OrderStatus current, OrderStatus newStatus) {
 
-        if((current == OrderStatus.CREATED) && (newStatus == OrderStatus.PAID)){
+        if (current == newStatus) {
             return;
         }
 
-        if((current == OrderStatus.PAID)  && (newStatus == OrderStatus.SHIPPED)){
+        if ((current == OrderStatus.CREATED || current == OrderStatus.PAYMENT_PENDING)
+                && (newStatus == OrderStatus.PAID || newStatus == OrderStatus.PAYMENT_COMPLETED)) {
             return;
         }
 
-        if((current == OrderStatus.SHIPPED) && (newStatus == OrderStatus.DELIVERED)){
+        if ((current == OrderStatus.PAID || current == OrderStatus.PAYMENT_COMPLETED)
+                && (newStatus == OrderStatus.SHIPPED || newStatus == OrderStatus.DELIVERED)) {
             return;
         }
 
-        if(((current == OrderStatus.CREATED) || (current == OrderStatus.PAYMENT_PENDING) || (current == OrderStatus.PAID))
-                && (newStatus == OrderStatus.CANCELLED)){
+        if (current == OrderStatus.SHIPPED && newStatus == OrderStatus.DELIVERED) {
             return;
         }
 
-        throw new RuntimeException("Invalid status transition: "+current+" -> "+newStatus);
+        if (((current == OrderStatus.CREATED) || (current == OrderStatus.PAYMENT_PENDING)
+                || (current == OrderStatus.PAYMENT_COMPLETED) || (current == OrderStatus.PAID))
+                && (newStatus == OrderStatus.CANCELLED)) {
+            return;
+        }
+
+        throw new RuntimeException("Invalid status transition: " + current + " -> " + newStatus);
     }
 
     public void updateOrderStatus(String orderId, String status) {
@@ -315,7 +342,7 @@ public class OrderService {
         }
 
         // Automated refund if order was already paid
-        if (previousStatus == OrderStatus.PAID) {
+        if (previousStatus == OrderStatus.PAID || previousStatus == OrderStatus.PAYMENT_COMPLETED) {
             try {
                 paymentClient.refundPayment(new com.project.orderservice.dto.payment.PaymentRefundRequest(orderId.toString(), null, "ORDER_CANCELLED_BY_CUSTOMER"));
                 log.info("Triggered payment refund for cancelled order {}", orderId);
@@ -324,7 +351,7 @@ public class OrderService {
             }
         }
 
-        String refundNote = (previousStatus == OrderStatus.PAID) ? " A full refund has been initiated to your original payment method." : "";
+        String refundNote = (previousStatus == OrderStatus.PAID || previousStatus == OrderStatus.PAYMENT_COMPLETED) ? " A full refund has been initiated to your original payment method." : "";
         publishOrderStatusNotification(
                 savedOrder,
                 "Order Cancelled 🛑",

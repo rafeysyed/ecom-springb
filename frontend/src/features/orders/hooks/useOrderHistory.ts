@@ -6,5 +6,8 @@ export function useOrderHistory(userId: string | undefined | null) {
         queryKey: ['orders', 'history', userId],
         queryFn: () => getOrderHistory(userId as string),
         enabled: !!userId,
+        staleTime: 0,
+        refetchOnMount: 'always',
+        refetchInterval: 5_000,
     });
 }

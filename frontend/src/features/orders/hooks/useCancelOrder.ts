@@ -6,9 +6,12 @@ export function useCancelOrder() {
 
     return useMutation({
         mutationFn: (orderId: string) => cancelOrder(orderId),
-        onSuccess: (_data, orderId) => {
-            queryClient.invalidateQueries({ queryKey: ['order', orderId] });
+        onSuccess: (updatedOrder, orderId) => {
             queryClient.invalidateQueries({ queryKey: ['orders'] });
+            queryClient.invalidateQueries({ queryKey: ['admin', 'orders'] });
+            if (updatedOrder) {
+                queryClient.setQueryData(['orders', orderId], updatedOrder);
+            }
         },
     });
 }
