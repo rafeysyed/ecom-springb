@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingBag, User, LogOut, ChevronDown, Package, UserCircle, LayoutDashboard } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { useCartStore } from '@/features/cart/cartStore';
@@ -12,6 +12,11 @@ import { NotificationBell } from '@/features/notifications/components/Notificati
 
 export function Header() {
     const navigate = useNavigate();
+    const location = useLocation();
+    const isLoginPage = location.pathname === '/login';
+    const isRegisterPage = location.pathname === '/register';
+    const isAuthPage = isLoginPage || isRegisterPage || location.pathname.startsWith('/oauth');
+
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const roles = useAuthStore((s) => s.roles);
     const storedName = useAuthStore((s) => s.userName);
@@ -56,10 +61,12 @@ export function Header() {
                     mrkt
                 </Link>
 
-                {/* Centered Search Bar with Instant Autocomplete */}
-                <div className="flex-1 max-w-lg mx-auto">
-                    <SearchAutocomplete />
-                </div>
+                {/* Centered Search Bar with Instant Autocomplete (hidden on login/register/auth pages) */}
+                {!isAuthPage && (
+                    <div className="flex-1 max-w-lg mx-auto">
+                        <SearchAutocomplete />
+                    </div>
+                )}
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-3 shrink-0">
@@ -156,6 +163,12 @@ export function Header() {
                                 </>
                             )}
                         </div>
+                    ) : isLoginPage ? (
+                        <Link to="/register">
+                            <Button variant="secondary" size="sm">
+                                Create account
+                            </Button>
+                        </Link>
                     ) : (
                         <Link to="/login">
                             <Button variant="secondary" size="sm">
