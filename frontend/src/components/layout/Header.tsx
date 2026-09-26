@@ -14,8 +14,6 @@ export function Header() {
     const navigate = useNavigate();
     const location = useLocation();
     const isLoginPage = location.pathname === '/login';
-    const isRegisterPage = location.pathname === '/register';
-    const isAuthPage = isLoginPage || isRegisterPage || location.pathname.startsWith('/oauth');
 
     const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
     const roles = useAuthStore((s) => s.roles);
@@ -61,12 +59,10 @@ export function Header() {
                     mrkt
                 </Link>
 
-                {/* Centered Search Bar with Instant Autocomplete (hidden on login/register/auth pages) */}
-                {!isAuthPage && (
-                    <div className="flex-1 max-w-lg mx-auto">
-                        <SearchAutocomplete />
-                    </div>
-                )}
+                {/* Centered Search Bar with Instant Autocomplete */}
+                <div className="flex-1 max-w-lg mx-auto">
+                    <SearchAutocomplete />
+                </div>
 
                 {/* Right Actions */}
                 <div className="flex items-center gap-3 shrink-0">
